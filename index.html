@@ -296,14 +296,14 @@ body.ob-open{overflow:hidden}
 .ob-check-row label{font-size:34px;color:var(--text-secondary);line-height:1.5;cursor:pointer}
 .ob-tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px}
 @media(max-width:560px){.ob-tier-grid{grid-template-columns:1fr}}
-.ob-tier-card{background:var(--bg-secondary);border:2px solid var(--border);border-radius:12px;padding:20px 16px;cursor:pointer;transition:all 0.15s;text-align:center}
+.ob-tier-card{background:var(--bg-secondary);border:3px solid var(--border);border-radius:16px;padding:32px 24px;cursor:pointer;transition:all 0.15s;text-align:center}
 .ob-tier-card:hover{border-color:var(--accent)}
 .ob-tier-card.selected{border-color:var(--accent);background:var(--accent-dim)}
-.ob-tier-icon{font-size:32px;margin-bottom:10px}
-.ob-tier-name{font-size:17px;font-weight:800;margin-bottom:8px}
-.ob-tier-price{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:12px}
-.ob-tier-features{font-size:14px;color:var(--text-secondary);line-height:1.7;text-align:left}
-.ob-tier-features li{list-style:none;padding-left:0;margin-bottom:3px}
+.ob-tier-icon{font-size:52px;margin-bottom:14px}
+.ob-tier-name{font-size:28px;font-weight:800;margin-bottom:10px}
+.ob-tier-price{font-size:22px;font-weight:700;color:var(--accent);margin-bottom:16px}
+.ob-tier-features{font-size:20px;color:var(--text-secondary);line-height:1.8;text-align:left}
+.ob-tier-features li{list-style:none;padding-left:0;margin-bottom:6px}
 .ob-tier-features li::before{content:"✓ ";color:var(--success)}
 .ob-tier-features li.no::before{content:"✗ ";color:var(--text-muted)}
 .ob-tier-features li.no{color:var(--text-muted)}
@@ -406,7 +406,7 @@ body.ob-open{overflow:hidden}
     <!-- STEP 2: CHOOSE TIER -->
     <div class="ob-step" id="ob-step-2">
       <div class="ob-body">
-        <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6">Choose how you want to use MyICE. You can always upgrade later in Settings.</p>
+        <p style="font-size:28px;color:var(--text-secondary);margin-bottom:24px;line-height:1.5">Choose how you want to use MyICE. You can always upgrade later in Settings.</p>
         <div class="ob-tier-grid">
 
           <div class="ob-tier-card" id="tier-guest" onclick="selectObTier('guest')">
