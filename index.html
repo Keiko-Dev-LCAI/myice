@@ -266,9 +266,56 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   /* Hide profile switcher on mobile — accessible via sidebar */
   .profile-switcher-btn{display:none}
   /* Emergency button — compact but always fully visible in header */
-  .btn-emergency-header{padding:10px 16px;font-size:15px;gap:6px;letter-spacing:0;flex-shrink:0;white-space:nowrap}
+  .btn-emergency-header{padding:10px 16px;font-size:22px;gap:6px;letter-spacing:0;flex-shrink:0;white-space:nowrap}
   .btn-emergency-header .emerg-label{display:none}
   .btn-emergency-header .emerg-short{display:inline}
+
+  /* Nav items scale down slightly on mobile since sidebar is full width */
+  .nav-item{font-size:24px}
+  .nav-item.nav-emergency{font-size:26px}
+  .sidebar-section-label{font-size:18px}
+
+  /* Main content text — still large, just not phone-breaking */
+  .section-title{font-size:36px}
+  .card-title{font-size:20px}
+  .stat-label{font-size:18px}
+  .stat-value{font-size:36px}
+  .stat-sub{font-size:18px}
+  .list-item-title{font-size:22px}
+  .list-item-subtitle{font-size:18px}
+  .btn{font-size:22px}
+  .badge{font-size:18px}
+  .input,.select,.textarea{font-size:22px}
+  .form-group label{font-size:18px}
+  .tab{font-size:20px}
+  .chart-title{font-size:20px}
+  .chart-latest,.chart-subtitle{font-size:18px}
+  .time-btn{font-size:18px}
+  .em-header-title{font-size:26px}
+  .em-header-sub{font-size:16px}
+  .em-card-title{font-size:16px}
+  .em-info-label{font-size:16px}
+  .em-info-value{font-size:26px}
+  .em-contact-name{font-size:22px}
+  .em-contact-rel{font-size:16px}
+  .em-contact-phone{font-size:28px}
+  .em-list-row{font-size:20px}
+
+  /* Onboarding — full width, readable font for phone screen */
+  .ob-dialog{width:95vw}
+  .ob-header{padding:20px 18px 16px}
+  .ob-header h2{font-size:22px}
+  .ob-header p{font-size:16px}
+  .ob-body{padding:20px 18px}
+  .ob-footer{padding:16px 18px}
+  .ob-disclaimer-text{font-size:18px;line-height:1.7}
+  .ob-disclaimer-text h4{font-size:19px}
+  .ob-check-row label{font-size:18px}
+  .ob-tier-grid{grid-template-columns:1fr}
+  .ob-tier-name{font-size:22px}
+  .ob-tier-price{font-size:18px}
+  .ob-tier-features{font-size:17px}
+  .ob-tier-icon{font-size:40px}
 }
 @media(max-width:480px){
   .stat-grid{grid-template-columns:1fr 1fr}
