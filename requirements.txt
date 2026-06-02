@@ -1,0 +1,8 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0
+web3==7.6.0
+eth-account==0.13.7
+websocket-client>=1.7.0
+cryptography>=42.0.0
+requests>=2.31.0

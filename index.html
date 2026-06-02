@@ -1,0 +1,3040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MyICE ⚕️ — Personal Health Vault</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: #1c2128;
+  --bg-hover: #21262d;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #656d76;
+  --accent: #00B4D8;
+  --accent-dim: rgba(0,180,216,0.13);
+  --emergency: #E63946;
+  --emergency-dim: rgba(230,57,70,0.13);
+  --warning: #f77f00;
+  --warning-dim: rgba(247,127,0,0.13);
+  --success: #2ea043;
+  --success-dim: rgba(46,160,67,0.13);
+  --sidebar-width: 300px;
+  --header-height: 64px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;font-size:16px}
+a{color:inherit;text-decoration:none}
+
+/* ── LAYOUT ── */
+.app-shell{display:flex;flex-direction:column;min-height:100vh}
+.app-header{height:var(--header-height);background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:22px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;letter-spacing:-0.3px}
+.logo-symbol{color:var(--accent);font-size:24px}
+.logo-sub{font-size:13px;color:var(--text-muted);font-weight:400;letter-spacing:0.5px;margin-left:2px;align-self:flex-end;padding-bottom:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.btn-hamburger{background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:22px;padding:6px;display:none}
+.app-body{display:flex;flex:1;min-height:0}
+
+/* ── EMERGENCY BUTTON ── */
+.btn-emergency-header{background:var(--emergency);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:8px;letter-spacing:0.5px;animation:pulse-emergency 2.5s infinite}
+@keyframes pulse-emergency{0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,0.5)}60%{box-shadow:0 0 0 10px rgba(230,57,70,0)}}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-width);background:var(--bg-secondary);border-right:1px solid var(--border);overflow-y:auto;height:calc(100vh - var(--header-height));position:sticky;top:var(--header-height);flex-shrink:0;transition:transform 0.3s}
+.sidebar-section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:20px 18px 8px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 18px;color:var(--text-secondary);cursor:pointer;font-size:16px;transition:all 0.12s;border-left:3px solid transparent;user-select:none}
+.nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.nav-item.nav-emergency{color:var(--emergency);font-weight:700;font-size:17px}
+.nav-item.nav-emergency:hover,.nav-item.nav-emergency.active{background:var(--emergency-dim);border-left-color:var(--emergency)}
+.nav-icon{font-size:20px;width:26px;text-align:center;flex-shrink:0}
+
+/* ── MAIN CONTENT ── */
+.main-content{flex:1;padding:32px 36px;overflow-y:auto;min-width:0}
+.section{display:none;width:100%;animation:fadein 0.2s ease}
+@keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── SECTION HEADER ── */
+.section-title{font-size:26px;font-weight:800;color:var(--text-primary);margin-bottom:26px;display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.section-title .title-icon{font-size:30px}
+.section-subtitle{font-size:15px;color:var(--text-muted);font-weight:400;margin-left:4px}
+
+/* ── CARDS ── */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
+.card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
+.card + .card{margin-top:0}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:6px;font-size:15px;font-weight:500;cursor:pointer;border:none;transition:all 0.12s;white-space:nowrap;font-family:inherit}
+.btn-primary{background:var(--accent);color:#000;font-weight:700}
+.btn-primary:hover{background:#00caee;transform:translateY(-1px)}
+.btn-secondary{background:var(--bg-hover);color:var(--text-primary);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:var(--emergency);color:#fff;font-weight:600}
+.btn-danger:hover{background:#ff4252}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:15px;padding:5px 7px;border-radius:4px;transition:all 0.12s;font-family:inherit}
+.btn-icon:hover{color:var(--text-primary);background:var(--bg-hover)}
+.btn-icon.danger:hover{color:var(--emergency)}
+.btn-locked{background:var(--bg-hover)!important;color:var(--text-muted)!important;cursor:not-allowed!important;border:1px dashed var(--border)!important;opacity:0.7}
+
+/* ── FORMS ── */
+.form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-secondary)}
+.input,.select,.textarea{background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:16px;padding:11px 14px;transition:border-color 0.12s;width:100%;font-family:inherit}
+.input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,180,216,0.1)}
+.select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%238b949e' d='M4 6l4 4 4-4z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;background-size:14px;padding-right:30px}
+.select option{background:var(--bg-card)}
+.textarea{resize:vertical;min-height:80px;line-height:1.5}
+input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
+
+/* ── LISTS ── */
+.list-item{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;transition:border-color 0.12s}
+.list-item:hover{border-color:rgba(0,180,216,0.4)}
+.list-item-content{flex:1;min-width:0}
+.list-item-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+.list-item-subtitle{font-size:12.5px;color:var(--text-secondary);margin-top:3px;line-height:1.4}
+.list-item-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:3px 10px;border-radius:100px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.badge-red{background:var(--emergency-dim);color:var(--emergency);border:1px solid rgba(230,57,70,0.3)}
+.badge-orange{background:var(--warning-dim);color:var(--warning);border:1px solid rgba(247,127,0,0.3)}
+.badge-teal{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(0,180,216,0.3)}
+.badge-green{background:var(--success-dim);color:var(--success);border:1px solid rgba(46,160,67,0.3)}
+.badge-gray{background:rgba(139,148,158,0.13);color:var(--text-secondary);border:1px solid var(--border)}
+
+/* ── ALERT BANNERS ── */
+.alert-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:8px;font-size:17px;font-weight:800;letter-spacing:0.5px;margin-bottom:10px;border-left:5px solid}
+.alert-banner.critical{background:rgba(230,57,70,0.12);border-left-color:var(--emergency);color:#ff6b78}
+.alert-banner.important{background:rgba(247,127,0,0.12);border-left-color:var(--warning);color:#ffaa44}
+.alert-banner .alert-icon{font-size:22px}
+
+/* ── PRIVACY TOGGLE ── */
+.privacy-toggle{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;cursor:pointer;padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:var(--bg-primary);transition:all 0.12s;white-space:nowrap;font-family:inherit}
+.privacy-toggle.visible{border-color:var(--success);color:var(--success);background:var(--success-dim)}
+.privacy-toggle.private{border-color:var(--text-muted);color:var(--text-muted)}
+
+/* ── TABLES ── */
+.data-table{width:100%;border-collapse:collapse;font-size:14px}
+.data-table th{background:var(--bg-hover);padding:10px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:2px solid var(--border);font-weight:700}
+.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text-primary);vertical-align:top}
+.data-table tr:hover td{background:var(--bg-hover)}
+
+/* ── CHARTS ── */
+.chart-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+.chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.chart-title{font-size:14px;font-weight:700;color:var(--text-primary)}
+.chart-latest{font-size:13px;color:var(--text-muted)}
+.chart-subtitle{font-size:12px;color:var(--text-muted);margin-bottom:10px}
+.chart-container{position:relative;width:100%;height:200px}
+.time-filters{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.time-btn{padding:5px 12px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all 0.12s;font-family:inherit}
+.time-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+
+/* ── VITALS ENTRY ── */
+.vitals-entry-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:4px}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-bottom:24px}
+.stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.12s}
+.stat-card:hover{border-color:rgba(0,180,216,0.4)}
+.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;font-weight:700}
+.stat-value{font-size:24px;font-weight:800}
+.stat-value.teal{color:var(--accent)}
+.stat-value.red{color:var(--emergency)}
+.stat-value.orange{color:var(--warning)}
+.stat-value.green{color:var(--success)}
+.stat-value.gray{color:var(--text-muted)}
+.stat-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+/* ── TIMELINE ── */
+.timeline{padding-left:20px;border-left:2px solid var(--border);margin-top:8px}
+.timeline-item{position:relative;padding:0 0 22px 20px}
+.timeline-dot{position:absolute;left:-27px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-primary)}
+.timeline-date{font-size:12px;color:var(--text-muted);margin-bottom:4px}
+.timeline-title{font-size:15px;font-weight:700;color:var(--text-primary)}
+.timeline-body{font-size:13px;color:var(--text-secondary);margin-top:3px;line-height:1.5}
+
+/* ── PROGRESS ── */
+.progress-bar{height:8px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:100px;transition:width 0.5s ease;background:var(--accent)}
+.progress-fill.green{background:var(--success)}
+.progress-fill.orange{background:var(--warning)}
+.progress-fill.red{background:var(--emergency)}
+
+/* ── AI FEATURE LOCK ── */
+.ai-locked-row{display:flex;align-items:center;gap:10px;background:rgba(139,148,158,0.07);border:1px dashed var(--border);border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text-muted)}
+.upgrade-banner{background:var(--accent-dim);border:1px solid rgba(0,180,216,0.2);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text-secondary);display:flex;align-items:center;gap:10px}
+.upgrade-banner span{color:var(--accent);font-weight:700}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 18px;color:var(--text-secondary);cursor:pointer;font-size:14px;border-bottom:2px solid transparent;transition:all 0.12s;margin-bottom:-1px;user-select:none}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:400;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.visible{display:flex}
+.modal-dialog{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── PIN MODAL ── */
+#pin-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:600;display:none;align-items:center;justify-content:center}
+#pin-modal.visible{display:flex}
+.pin-dialog{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:32px 28px;width:300px;text-align:center}
+.pin-dialog h2{font-size:20px;font-weight:800;margin-bottom:8px}
+.pin-dialog p{color:var(--text-secondary);font-size:13.5px;margin-bottom:22px;line-height:1.5}
+.pin-dots{display:flex;gap:12px;justify-content:center;margin-bottom:22px}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border);transition:background 0.15s}
+.pin-dot.filled{background:var(--accent)}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.pin-key{background:var(--bg-hover);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:22px;font-weight:700;padding:14px;cursor:pointer;transition:all 0.1s;font-family:inherit}
+.pin-key:hover{background:var(--accent);color:#000;border-color:var(--accent)}
+.pin-key:active{transform:scale(0.93)}
+.pin-error{color:var(--emergency);font-size:13px;margin-top:8px;min-height:20px}
+.pin-skip{color:var(--text-muted);font-size:12px;cursor:pointer;margin-top:10px;display:inline-block}
+.pin-skip:hover{color:var(--text-secondary)}
+
+/* ── EMERGENCY OVERLAY ── */
+#emergency-overlay{position:fixed;inset:0;background:#0a0002;z-index:1000;overflow-y:auto;display:none}
+#emergency-overlay.visible{display:block}
+.em-header{background:var(--emergency);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.em-header-title{font-size:22px;font-weight:900;color:#fff;display:flex;align-items:center;gap:12px;letter-spacing:1px}
+.em-header-sub{font-size:12px;font-weight:400;color:rgba(255,255,255,0.75);display:block;margin-top:2px}
+.em-close-btn{background:rgba(0,0,0,0.25);color:#fff;border:2px solid rgba(255,255,255,0.4);padding:9px 18px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit}
+.em-body{padding:24px;max-width:820px;margin:0 auto}
+.em-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:18px;margin-bottom:16px}
+.em-card-title{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:rgba(255,255,255,0.45);margin-bottom:12px;font-weight:700}
+.em-info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.em-info-label{font-size:11px;color:rgba(255,255,255,0.45);margin-bottom:3px}
+.em-info-value{font-size:18px;font-weight:800;color:#fff}
+.em-contact{display:flex;align-items:center;justify-content:space-between;padding:13px;background:rgba(255,255,255,0.07);border-radius:8px;margin-bottom:8px}
+.em-contact-name{font-size:16px;font-weight:800;color:#fff}
+.em-contact-rel{font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px}
+.em-contact-phone{font-size:22px;font-weight:900;color:#4ade80;text-decoration:none;letter-spacing:0.5px}
+.em-list-row{padding:9px 12px;border-left:3px solid var(--accent);margin-bottom:6px;font-size:14.5px;color:rgba(255,255,255,0.9);border-radius:0 4px 4px 0;background:rgba(255,255,255,0.04)}
+.em-empty{color:rgba(255,255,255,0.3);font-size:14px;font-style:italic}
+
+/* ── MISC ── */
+.empty-state{text-align:center;padding:48px 24px;color:var(--text-muted)}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.tag{display:inline-block;padding:3px 10px;background:var(--bg-hover);border:1px solid var(--border);border-radius:100px;font-size:12px;color:var(--text-secondary)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.range-value{display:inline-block;min-width:32px;text-align:center;font-weight:700;color:var(--accent)}
+.profile-switcher-btn{display:flex;align-items:center;gap:6px;background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12.5px;color:var(--text-secondary);transition:all 0.12s;font-family:inherit}
+.profile-switcher-btn:hover{color:var(--text-primary);border-color:var(--accent)}
+
+/* ── ORCAPOD STRIP ── */
+.orcapod-strip{background:var(--bg-secondary);border-top:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--text-muted)}
+.orcapod-label{font-weight:700;color:var(--text-secondary);margin-right:4px;letter-spacing:0.3px}
+.orca-link{color:var(--text-muted);text-decoration:none;padding:3px 8px;border-radius:4px;border:1px solid var(--border);transition:all 0.12s}
+.orca-link:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-dim)}
+.orca-divider{color:var(--border)}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .btn-hamburger{display:flex}
+  .sidebar{position:fixed;left:0;top:var(--header-height);height:calc(100vh - var(--header-height));z-index:200;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 20px rgba(0,0,0,0.5)}
+  .sidebar-backdrop{position:fixed;inset:0;top:var(--header-height);background:rgba(0,0,0,0.5);z-index:190;display:none}
+  .sidebar-backdrop.visible{display:block}
+  .main-content{padding:16px 14px}
+  .two-col,.three-col{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .em-info-grid{grid-template-columns:1fr 1fr}
+  .logo-sub{display:none}
+  .form-row{flex-direction:column;gap:10px}
+  .form-group{min-width:unset}
+}
+@media(max-width:480px){
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .em-info-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ PIN MODAL ═══════════════════ -->
+<div id="pin-modal">
+  <div class="pin-dialog">
+    <div style="font-size:32px;margin-bottom:10px">🔐</div>
+    <h2>Enter PIN</h2>
+    <p id="pin-prompt-text">Enter your Owner PIN or Caregiver PIN to continue.</p>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="dot-0"></div>
+      <div class="pin-dot" id="dot-1"></div>
+      <div class="pin-dot" id="dot-2"></div>
+      <div class="pin-dot" id="dot-3"></div>
+      <div class="pin-dot" id="dot-4"></div>
+      <div class="pin-dot" id="dot-5"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key" onclick="pinPress('clr')" style="font-size:13px;color:var(--text-muted)">CLR</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key" onclick="pinPress('del')" style="font-size:15px">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-skip" id="pin-skip-btn" onclick="pinSkip()">Skip (no PIN set)</div>
+  </div>
+</div>
+
+<!-- ═══════════════════ EMERGENCY OVERLAY ═══════════════════ -->
+<div id="emergency-overlay">
+  <div class="em-header">
+    <div>
+      <div class="em-header-title">🚨 IN CASE OF EMERGENCY <span style="font-size:15px;font-weight:500">⚕️</span></div>
+      <span class="em-header-sub">Show this screen to first responders • Read only</span>
+    </div>
+    <button class="em-close-btn" onclick="hideEmergency()">✕ Close</button>
+  </div>
+  <div class="em-body" id="em-body">
+    <!-- Rendered by JS -->
+  </div>
+</div>
+
+<!-- ═══════════════════ SIDEBAR BACKDROP (mobile) ═══════════════════ -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- ═══════════════════ APP SHELL ═══════════════════ -->
+<div class="app-shell">
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-hamburger" onclick="toggleSidebar()">☰</button>
+      <div class="logo">
+        <span class="logo-symbol">⚕️</span>
+        <span>MyICE</span>
+        <span class="logo-sub">Personal Health Vault</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="showSection('family')">
+        👤 <span id="active-profile-name">My Profile</span>
+      </button>
+      <button class="btn-emergency-header" onclick="showEmergency()">🚨 EMERGENCY</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- ── SIDEBAR ── -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-section-label">Quick Access</div>
+      <div class="nav-item nav-emergency" data-section="emergency" onclick="showEmergency()">
+        <span class="nav-icon">🚨</span> Emergency View
+      </div>
+      <div class="nav-item" data-section="dashboard" onclick="navTo('dashboard')">
+        <span class="nav-icon">🏠</span> Dashboard
+      </div>
+
+      <div class="sidebar-section-label">My Health</div>
+      <div class="nav-item" data-section="profile" onclick="navTo('profile')">
+        <span class="nav-icon">👤</span> My Profile
+      </div>
+      <div class="nav-item" data-section="alerts" onclick="navTo('alerts')">
+        <span class="nav-icon">⚠️</span> Medical Alerts
+      </div>
+      <div class="nav-item" data-section="conditions" onclick="navTo('conditions')">
+        <span class="nav-icon">🏥</span> Conditions
+      </div>
+      <div class="nav-item" data-section="medications" onclick="navTo('medications')">
+        <span class="nav-icon">💊</span> Medications
+      </div>
+      <div class="nav-item" data-section="allergies" onclick="navTo('allergies')">
+        <span class="nav-icon">🚫</span> Allergies
+      </div>
+      <div class="nav-item" data-section="vitals" onclick="navTo('vitals')">
+        <span class="nav-icon">📊</span> Vitals
+      </div>
+      <div class="nav-item" data-section="symptom-journal" onclick="navTo('symptom-journal')">
+        <span class="nav-icon">📝</span> Symptom Journal
+      </div>
+
+      <div class="sidebar-section-label">Records</div>
+      <div class="nav-item" data-section="lab-results" onclick="navTo('lab-results')">
+        <span class="nav-icon">🔬</span> Lab Results
+      </div>
+      <div class="nav-item" data-section="documents" onclick="navTo('documents')">
+        <span class="nav-icon">📄</span> Documents
+      </div>
+      <div class="nav-item" data-section="history" onclick="navTo('history')">
+        <span class="nav-icon">📋</span> Medical History
+      </div>
+      <div class="nav-item" data-section="vaccinations" onclick="navTo('vaccinations')">
+        <span class="nav-icon">💉</span> Vaccinations
+      </div>
+      <div class="nav-item" data-section="vision-dental" onclick="navTo('vision-dental')">
+        <span class="nav-icon">👁️</span> Vision &amp; Dental
+      </div>
+      <div class="nav-item" data-section="devices" onclick="navTo('devices')">
+        <span class="nav-icon">🔧</span> Medical Devices
+      </div>
+
+      <div class="sidebar-section-label">Care</div>
+      <div class="nav-item" data-section="appointments" onclick="navTo('appointments')">
+        <span class="nav-icon">📅</span> Appointments
+      </div>
+      <div class="nav-item" data-section="questions" onclick="navTo('questions')">
+        <span class="nav-icon">❓</span> Doctor Questions
+      </div>
+      <div class="nav-item" data-section="care-team" onclick="navTo('care-team')">
+        <span class="nav-icon">👩‍⚕️</span> Care Team
+      </div>
+      <div class="nav-item" data-section="emergency-contacts" onclick="navTo('emergency-contacts')">
+        <span class="nav-icon">📞</span> Emergency Contacts
+      </div>
+
+      <div class="sidebar-section-label">Connected</div>
+      <div class="nav-item" data-section="healthapps" onclick="navTo('healthapps')">
+        <span class="nav-icon">🔗</span> My Health Apps
+      </div>
+
+      <div class="sidebar-section-label">Manage</div>
+      <div class="nav-item" data-section="billing" onclick="navTo('billing')">
+        <span class="nav-icon">💳</span> Billing &amp; Insurance
+      </div>
+      <div class="nav-item" data-section="health-goals" onclick="navTo('health-goals')">
+        <span class="nav-icon">🎯</span> Health Goals
+      </div>
+      <div class="nav-item" data-section="family" onclick="navTo('family')">
+        <span class="nav-icon">👨‍👩‍👧</span> Family Profiles
+      </div>
+      <div class="nav-item" data-section="settings" onclick="navTo('settings')">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+      <div class="nav-item" data-section="help" onclick="navTo('help')">
+        <span class="nav-icon">💡</span> Help &amp; FAQ
+      </div>
+      <div class="nav-item" data-section="terms" onclick="navTo('terms')">
+        <span class="nav-icon">📋</span> Terms &amp; Disclaimers
+      </div>
+      <div style="height:20px"></div>
+    </nav>
+
+    <!-- ── MAIN CONTENT ── -->
+    <main class="main-content" id="main-content">
+
+<!-- ══════════════════════════════════════
+     SECTION: DASHBOARD
+══════════════════════════════════════ -->
+<div class="section" id="section-dashboard">
+  <div class="section-title"><span class="title-icon">🏠</span> Dashboard</div>
+  <div id="dash-alerts-area"></div>
+  <div class="stat-grid" id="dash-stats"></div>
+  <div class="two-col" style="gap:16px">
+    <div>
+      <div class="card">
+        <div class="card-title">⚡ Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-danger" onclick="showEmergency()" style="width:100%;justify-content:center">🚨 Open Emergency View</button>
+          <button class="btn btn-primary" onclick="navTo('vitals')" style="width:100%;justify-content:center">📊 Log Vitals</button>
+          <button class="btn btn-secondary" onclick="navTo('appointments')" style="width:100%;justify-content:center">📅 View Appointments</button>
+          <button class="btn btn-secondary" onclick="navTo('questions')" style="width:100%;justify-content:center">❓ Doctor Questions</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title">🩺 Last Vitals</div>
+        <div id="dash-last-vitals"><div class="empty-state" style="padding:20px"><span class="empty-icon" style="font-size:30px">📊</span><p>No vitals logged yet</p></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">📅 Upcoming Appointments</div>
+    <div id="dash-appointments"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">💊 Current Medications</div>
+    <div id="dash-medications"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MY PROFILE
+══════════════════════════════════════ -->
+<div class="section" id="section-profile">
+  <div class="section-title"><span class="title-icon">👤</span> My Profile</div>
+  <div class="card">
+    <div class="card-title">Personal Information</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input class="input" id="prof-name" placeholder="Jane Doe" oninput="saveProfile()">
+      </div>
+      <div class="form-group">
+        <label>Date of Birth</label>
+        <input class="input" type="date" id="prof-dob" oninput="saveProfile()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Home Address</label>
+        <input class="input" id="prof-address" placeholder="123 Main St, City, State 12345" oninput="saveProfile()">
+      </div>
+      <div class="form-group">
+        <label>Phone</label>
+        <input class="input" id="prof-phone" placeholder="(555) 000-0000" oninput="saveProfile()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Blood Type</label>
+        <select class="select" id="prof-blood" onchange="saveProfile()">
+          <option value="">Unknown</option>
+          <option value="A+">A+</option><option value="A-">A-</option>
+          <option value="B+">B+</option><option value="B-">B-</option>
+          <option value="AB+">AB+</option><option value="AB-">AB-</option>
+          <option value="O+">O+</option><option value="O-">O-</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Organ Donor</label>
+        <select class="select" id="prof-organ" onchange="saveProfile()">
+          <option value="">Not specified</option>
+          <option value="Yes">Yes — Registered Donor</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sex at Birth</label>
+        <select class="select" id="prof-sex" onchange="saveProfile()">
+          <option value="">Prefer not to say</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other / Intersex</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Emergency Visibility — control what paramedics see</div>
+    <div id="prof-visibility-list" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MEDICAL ALERTS
+══════════════════════════════════════ -->
+<div class="section" id="section-alerts">
+  <div class="section-title"><span class="title-icon">⚠️</span> Medical Alerts</div>
+  <p style="color:var(--text-secondary);margin-bottom:20px;font-size:14px">These banners appear in your Emergency View and Dashboard — large, bold, impossible to miss. Use for conditions first responders must know immediately.</p>
+  <div class="card">
+    <div class="card-title">Add Alert Banner</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Alert Text (e.g. DIABETIC, DO NOT RESUSCITATE)</label>
+        <input class="input" id="alert-text" placeholder="e.g. SEVERE PENICILLIN ALLERGY" onkeydown="if(event.key==='Enter')addAlert()">
+      </div>
+      <div class="form-group">
+        <label>Severity</label>
+        <select class="select" id="alert-severity">
+          <option value="critical">🔴 Critical (red)</option>
+          <option value="important">🟠 Important (orange)</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addAlert()">+ Add Banner</button>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <p style="font-size:12px;color:var(--text-muted)">Quick presets:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px" id="alert-presets"></div>
+    </div>
+  </div>
+  <div id="alerts-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: CONDITIONS
+══════════════════════════════════════ -->
+<div class="section" id="section-conditions">
+  <div class="section-title"><span class="title-icon">🏥</span> Conditions</div>
+  <div class="card">
+    <div class="card-title">Add Condition</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Diagnosis / Condition</label>
+        <input class="input" id="cond-name" placeholder="e.g. Type 2 Diabetes" onkeydown="if(event.key==='Enter')addCondition()">
+      </div>
+      <div class="form-group">
+        <label>Since (year)</label>
+        <input class="input" id="cond-year" placeholder="2019" type="number" min="1900" max="2100">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="select" id="cond-status">
+          <option value="Active">Active</option>
+          <option value="Managed">Managed</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addCondition()">+ Add</button>
+      </div>
+    </div>
+  </div>
+  <div id="conditions-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MEDICATIONS
+══════════════════════════════════════ -->
+<div class="section" id="section-medications">
+  <div class="section-title"><span class="title-icon">💊</span> Medications</div>
+  <div class="upgrade-banner" id="med-upgrade-banner" style="display:none">
+    🔒 <span>AI features</span> — drug interaction checks and plain-English explainers require Premium ($3/month in LCAI). Upgrade in Settings.
+  </div>
+  <div class="card">
+    <div class="card-title">Add Medication</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Medication Name</label>
+        <input class="input" id="med-name" placeholder="e.g. Metformin">
+      </div>
+      <div class="form-group">
+        <label>Dosage</label>
+        <input class="input" id="med-dose" placeholder="e.g. 500mg">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Route</label>
+        <select class="select" id="med-route">
+          <option>Pill / Oral</option><option>Injection</option><option>Topical</option>
+          <option>Liquid</option><option>Inhaler</option><option>Patch</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Frequency</label>
+        <input class="input" id="med-freq" placeholder="e.g. Twice daily with meals">
+      </div>
+      <div class="form-group">
+        <label>Prescribing Doctor</label>
+        <input class="input" id="med-doctor" placeholder="Dr. Smith">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addMedication()">+ Add Medication</button>
+  </div>
+  <div class="card">
+    <div class="card-title">AI Tools</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-secondary" id="btn-interactions" onclick="checkInteractions()">🔬 Check Drug Interactions</button>
+      <span style="font-size:12px;color:var(--text-muted);align-self:center" id="interactions-hint">Checks all current medications for interactions</span>
+    </div>
+    <div id="interaction-result" style="margin-top:12px"></div>
+  </div>
+  <div id="medications-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: ALLERGIES
+══════════════════════════════════════ -->
+<div class="section" id="section-allergies">
+  <div class="section-title"><span class="title-icon">🚫</span> Allergies</div>
+  <div class="card">
+    <div class="card-title">Add Allergy</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Allergen</label>
+        <input class="input" id="allergy-name" placeholder="e.g. Penicillin, Peanuts, Bee stings" onkeydown="if(event.key==='Enter')addAllergy()">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select class="select" id="allergy-type">
+          <option>Medication</option><option>Food</option><option>Environmental</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Severity</label>
+        <select class="select" id="allergy-severity">
+          <option>Mild</option><option>Moderate</option><option>Severe</option><option>Anaphylaxis</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reaction</label>
+        <input class="input" id="allergy-reaction" placeholder="e.g. Hives, throat swelling">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addAllergy()">+ Add</button>
+      </div>
+    </div>
+  </div>
+  <div id="allergies-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: LAB RESULTS
+══════════════════════════════════════ -->
+<div class="section" id="section-lab-results">
+  <div class="section-title"><span class="title-icon">🔬</span> Lab Results</div>
+  <div class="upgrade-banner" id="lab-upgrade-banner" style="display:none">
+    🔒 <span>AI analysis</span> of lab results requires Premium ($3/month in LCAI). Upgrade in Settings.
+  </div>
+  <div class="card">
+    <div class="card-title">Add Lab Result</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Test Name</label>
+        <input class="input" id="lab-name" placeholder="e.g. Complete Blood Count">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input class="input" type="date" id="lab-date">
+      </div>
+      <div class="form-group">
+        <label>Ordered by</label>
+        <input class="input" id="lab-doctor" placeholder="Dr. Smith">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Key Values / Notes</label>
+        <textarea class="textarea" id="lab-notes" placeholder="Paste key values here, e.g. WBC: 7.2, RBC: 4.8, HGB: 14.1..." style="min-height:70px"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-primary" onclick="addLabResult()">+ Add Result</button>
+      <button class="btn btn-secondary" id="btn-analyze-lab" onclick="analyzeLab()">🤖 AI Analyze</button>
+    </div>
+    <div id="lab-ai-result" style="margin-top:12px"></div>
+  </div>
+  <div id="lab-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: VITALS
+══════════════════════════════════════ -->
+<div class="section" id="section-vitals">
+  <div class="section-title"><span class="title-icon">📊</span> Vitals</div>
+  <div class="card">
+    <div class="card-title">Log Vitals</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date &amp; Time</label>
+        <input class="input" type="datetime-local" id="vital-datetime">
+      </div>
+    </div>
+    <div class="vitals-entry-grid">
+      <div class="form-group">
+        <label>Systolic BP (mmHg)</label>
+        <input class="input" id="vital-sys" type="number" placeholder="120" min="40" max="300">
+      </div>
+      <div class="form-group">
+        <label>Diastolic BP (mmHg)</label>
+        <input class="input" id="vital-dia" type="number" placeholder="80" min="20" max="200">
+      </div>
+      <div class="form-group">
+        <label>Heart Rate (bpm)</label>
+        <input class="input" id="vital-hr" type="number" placeholder="72" min="20" max="300">
+      </div>
+      <div class="form-group">
+        <label>Blood Sugar (mg/dL)</label>
+        <input class="input" id="vital-glucose" type="number" placeholder="95" min="20" max="600">
+      </div>
+      <div class="form-group">
+        <label>Weight (lbs)</label>
+        <input class="input" id="vital-weight" type="number" placeholder="160" min="10" max="1000" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Oxygen Level (%)</label>
+        <input class="input" id="vital-o2" type="number" placeholder="98" min="50" max="100" step="0.1">
+      </div>
+      <div class="form-group">
+        <label>Temperature (°F)</label>
+        <input class="input" id="vital-temp" type="number" placeholder="98.6" min="90" max="115" step="0.1">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addVital()" style="margin-top:8px">+ Log Entry</button>
+  </div>
+
+  <div class="time-filters" id="vitals-time-filters">
+    <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-right:4px">Show:</span>
+    <button class="time-btn active" onclick="setVitalsRange('7d',this)">7D</button>
+    <button class="time-btn" onclick="setVitalsRange('30d',this)">30D</button>
+    <button class="time-btn" onclick="setVitalsRange('3m',this)">3M</button>
+    <button class="time-btn" onclick="setVitalsRange('1y',this)">1Y</button>
+    <button class="time-btn" onclick="setVitalsRange('all',this)">All</button>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">🩸 Blood Pressure</div><div class="chart-latest" id="chart-bp-latest"></div></div>
+    <div class="chart-subtitle">Normal range: systolic 90–120 mmHg · diastolic 60–80 mmHg</div>
+    <div class="chart-container"><canvas id="chart-bp"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">❤️ Heart Rate</div><div class="chart-latest" id="chart-hr-latest"></div></div>
+    <div class="chart-subtitle">Normal range: 60–100 bpm</div>
+    <div class="chart-container"><canvas id="chart-hr"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">🍬 Blood Sugar</div><div class="chart-latest" id="chart-glucose-latest"></div></div>
+    <div class="chart-subtitle">Normal range: 70–140 mg/dL</div>
+    <div class="chart-container"><canvas id="chart-glucose"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">⚖️ Weight</div><div class="chart-latest" id="chart-weight-latest"></div></div>
+    <div class="chart-subtitle">Your personal weight trend</div>
+    <div class="chart-container"><canvas id="chart-weight"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">💨 Oxygen Level</div><div class="chart-latest" id="chart-o2-latest"></div></div>
+    <div class="chart-subtitle">Normal range: 95–100%</div>
+    <div class="chart-container"><canvas id="chart-o2"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div class="chart-title">🌡️ Temperature</div><div class="chart-latest" id="chart-temp-latest"></div></div>
+    <div class="chart-subtitle">Normal range: 97–99°F</div>
+    <div class="chart-container"><canvas id="chart-temp"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Recent Entries</div>
+    <div id="vitals-log-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: DOCUMENTS
+══════════════════════════════════════ -->
+<div class="section" id="section-documents">
+  <div class="section-title"><span class="title-icon">📄</span> Documents</div>
+  <div class="upgrade-banner" id="doc-upgrade-banner" style="display:none">
+    🔒 <span>AI auto-categorization</span> requires Premium ($3/month in LCAI). Upgrade in Settings.
+  </div>
+  <div class="card">
+    <div class="card-title">Upload Document</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Document Name</label>
+        <input class="input" id="doc-name" placeholder="e.g. MRI Results - June 2025">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select class="select" id="doc-category">
+          <option>Lab Results</option><option>Imaging</option><option>Prescriptions</option>
+          <option>Doctor Notes</option><option>Discharge Summary</option><option>Insurance</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input class="input" type="date" id="doc-date">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Upload File (PDF or Image)</label>
+        <input class="input" type="file" id="doc-file" accept=".pdf,image/*" style="padding:6px">
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <input class="input" id="doc-notes" placeholder="Optional notes">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="addDocument()">+ Upload Document</button>
+      <button class="btn btn-secondary" id="btn-analyze-doc" onclick="analyzeDocument()">🤖 AI Categorize &amp; Summarize</button>
+    </div>
+    <div id="doc-ai-result" style="margin-top:12px"></div>
+  </div>
+  <div id="documents-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: APPOINTMENTS
+══════════════════════════════════════ -->
+<div class="section" id="section-appointments">
+  <div class="section-title"><span class="title-icon">📅</span> Appointments</div>
+  <div class="card">
+    <div class="card-title">Add Appointment</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Doctor / Provider</label>
+        <input class="input" id="appt-doctor" placeholder="Dr. Jane Smith">
+      </div>
+      <div class="form-group">
+        <label>Specialty</label>
+        <input class="input" id="appt-specialty" placeholder="Cardiology">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input class="input" type="date" id="appt-date">
+      </div>
+      <div class="form-group">
+        <label>Time</label>
+        <input class="input" type="time" id="appt-time">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Location</label>
+        <input class="input" id="appt-location" placeholder="123 Medical Center Blvd">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Reason for Visit</label>
+        <input class="input" id="appt-reason" placeholder="e.g. Annual checkup, follow-up on blood pressure">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Notes</label>
+        <input class="input" id="appt-notes" placeholder="Bring insurance card, fast for 12 hours, etc.">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addAppointment()">+ Add Appointment</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchApptTab('upcoming',this)">Upcoming</div>
+    <div class="tab" onclick="switchApptTab('past',this)">Past</div>
+  </div>
+  <div id="appt-upcoming"></div>
+  <div id="appt-past" style="display:none"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: DOCTOR QUESTIONS
+══════════════════════════════════════ -->
+<div class="section" id="section-questions">
+  <div class="section-title"><span class="title-icon">❓</span> Questions for My Doctor</div>
+  <div class="upgrade-banner" id="q-upgrade-banner" style="display:none">
+    🔒 <span>AI question suggestions</span> based on your conditions and meds require Premium. Upgrade in Settings.
+  </div>
+  <div class="card">
+    <div class="card-title">Add Question</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:3">
+        <label>Question</label>
+        <input class="input" id="q-text" placeholder="e.g. Is it safe to take ibuprofen with my current medications?" onkeydown="if(event.key==='Enter')addQuestion()">
+      </div>
+      <div class="form-group">
+        <label>For Appointment</label>
+        <select class="select" id="q-appt">
+          <option value="">General / Any visit</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addQuestion()">+ Add</button>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-secondary" id="btn-suggest-questions" onclick="suggestQuestions()">🤖 Suggest Questions Based on My Health</button>
+    </div>
+    <div id="q-ai-result" style="margin-top:12px"></div>
+  </div>
+  <div id="questions-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: CARE TEAM
+══════════════════════════════════════ -->
+<div class="section" id="section-care-team">
+  <div class="section-title"><span class="title-icon">👩‍⚕️</span> Care Team</div>
+  <div class="card">
+    <div class="card-title">Add Provider</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Name</label>
+        <input class="input" id="ct-name" placeholder="Dr. Jane Smith">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select class="select" id="ct-role">
+          <option>Primary Care</option><option>Cardiologist</option><option>Neurologist</option>
+          <option>Endocrinologist</option><option>Dermatologist</option><option>Psychiatrist</option>
+          <option>Oncologist</option><option>Orthopedist</option><option>Physical Therapist</option>
+          <option>Pharmacy</option><option>Other Specialist</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phone</label>
+        <input class="input" id="ct-phone" placeholder="(555) 000-0000">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Address / Location</label>
+        <input class="input" id="ct-address" placeholder="123 Medical Blvd, Suite 100">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Notes</label>
+        <input class="input" id="ct-notes" placeholder="Seen every 3 months, after-hours: pager 555-1234">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="addCareTeam()">+ Add Provider</button>
+  </div>
+  <div id="care-team-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: EMERGENCY CONTACTS
+══════════════════════════════════════ -->
+<div class="section" id="section-emergency-contacts">
+  <div class="section-title"><span class="title-icon">📞</span> Emergency Contacts</div>
+  <div class="card">
+    <div class="card-title">Add Emergency Contact</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Full Name</label>
+        <input class="input" id="ec-name" placeholder="John Doe" onkeydown="if(event.key==='Enter')addEmergencyContact()">
+      </div>
+      <div class="form-group">
+        <label>Relationship</label>
+        <input class="input" id="ec-rel" placeholder="Spouse, Sibling, Friend...">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input class="input" id="ec-phone" placeholder="(555) 000-0000" type="tel">
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addEmergencyContact()">+ Add</button>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">📞 Phone numbers are tappable on mobile. Use ▲▼ to set priority order.</p>
+  <div id="emergency-contacts-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: BILLING & INSURANCE
+══════════════════════════════════════ -->
+<div class="section" id="section-billing">
+  <div class="section-title"><span class="title-icon">💳</span> Billing &amp; Insurance</div>
+  <div class="card">
+    <div class="card-title">Insurance Information</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Insurance Provider</label>
+        <input class="input" id="ins-provider" placeholder="Blue Cross Blue Shield" oninput="saveInsurance()">
+      </div>
+      <div class="form-group">
+        <label>Policy Number</label>
+        <input class="input" id="ins-policy" placeholder="XYZ123456" oninput="saveInsurance()">
+      </div>
+      <div class="form-group">
+        <label>Group Number</label>
+        <input class="input" id="ins-group" placeholder="GRP789" oninput="saveInsurance()">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Member Services Phone</label>
+        <input class="input" id="ins-member-phone" placeholder="1-800-000-0000" oninput="saveInsurance()">
+      </div>
+      <div class="form-group">
+        <label>Claims Phone</label>
+        <input class="input" id="ins-claims-phone" placeholder="1-800-000-0000" oninput="saveInsurance()">
+      </div>
+      <div class="form-group">
+        <label>Effective Date</label>
+        <input class="input" type="date" id="ins-effective" oninput="saveInsurance()">
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Add Bill</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Description</label>
+        <input class="input" id="bill-desc" placeholder="e.g. ER Visit — St. Mary's Hospital">
+      </div>
+      <div class="form-group">
+        <label>Provider</label>
+        <input class="input" id="bill-provider" placeholder="St. Mary's">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date of Service</label>
+        <input class="input" type="date" id="bill-date">
+      </div>
+      <div class="form-group">
+        <label>Amount ($)</label>
+        <input class="input" type="number" id="bill-amount" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="select" id="bill-status">
+          <option value="Outstanding">Outstanding</option>
+          <option value="Paid">Paid</option>
+          <option value="In Dispute">In Dispute</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" onclick="addBill()">+ Add Bill</button>
+      </div>
+    </div>
+  </div>
+  <div class="stat-grid" id="billing-stats" style="margin-bottom:16px"></div>
+  <div class="card" style="overflow-x:auto">
+    <div class="card-title">Bills</div>
+    <table class="data-table" id="bills-table">
+      <thead><tr><th>Description</th><th>Provider</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+      <tbody id="bills-tbody"></tbody>
+    </table>
+    <div id="bills-empty" class="empty-state" style="padding:30px">
+      <span class="empty-icon" style="font-size:36px">💳</span><p>No bills added yet</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MEDICAL HISTORY
+══════════════════════════════════════ -->
+<div class="section" id="section-history">
+  <div class="section-title"><span class="title-icon">📋</span> Medical History</div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchHistTab('surgeries',this)">Surgeries</div>
+    <div class="tab" onclick="switchHistTab('hospitalizations',this)">Hospitalizations</div>
+    <div class="tab" onclick="switchHistTab('events',this)">Major Events</div>
+    <div class="tab" onclick="switchHistTab('timeline',this)">Timeline</div>
+  </div>
+
+  <div id="hist-surgeries">
+    <div class="card">
+      <div class="card-title">Add Surgery / Procedure</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Procedure Name</label><input class="input" id="surg-name" placeholder="e.g. Appendectomy"></div>
+        <div class="form-group"><label>Date</label><input class="input" type="date" id="surg-date"></div>
+        <div class="form-group"><label>Hospital / Facility</label><input class="input" id="surg-hospital" placeholder="St. Mary's Hospital"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>Notes / Outcome</label><input class="input" id="surg-notes" placeholder="No complications, full recovery"></div></div>
+      <button class="btn btn-primary" onclick="addSurgery()">+ Add Surgery</button>
+    </div>
+    <div id="surgeries-list"></div>
+  </div>
+
+  <div id="hist-hospitalizations" style="display:none">
+    <div class="card">
+      <div class="card-title">Add Hospitalization</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Reason</label><input class="input" id="hosp-reason" placeholder="e.g. Pneumonia"></div>
+        <div class="form-group"><label>Admission Date</label><input class="input" type="date" id="hosp-date"></div>
+        <div class="form-group"><label>Hospital</label><input class="input" id="hosp-hospital" placeholder="St. Mary's Hospital"></div>
+        <div class="form-group"><label>Duration (days)</label><input class="input" type="number" id="hosp-days" placeholder="3" min="0"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>Notes</label><input class="input" id="hosp-notes" placeholder="ICU, treated with IV antibiotics"></div></div>
+      <button class="btn btn-primary" onclick="addHospitalization()">+ Add</button>
+    </div>
+    <div id="hospitalizations-list"></div>
+  </div>
+
+  <div id="hist-events" style="display:none">
+    <div class="card">
+      <div class="card-title">Add Major Event</div>
+      <div class="form-row">
+        <div class="form-group"><label>Type</label><select class="select" id="event-type"><option>Heart Attack</option><option>Stroke</option><option>Cancer Diagnosis</option><option>Major Injury</option><option>Organ Transplant</option><option>Pregnancy</option><option>Other</option></select></div>
+        <div class="form-group"><label>Date</label><input class="input" type="date" id="event-date"></div>
+        <div class="form-group" style="flex:2"><label>Notes</label><input class="input" id="event-notes" placeholder="Details..."></div>
+      </div>
+      <button class="btn btn-primary" onclick="addMedEvent()">+ Add Event</button>
+    </div>
+    <div id="events-list"></div>
+  </div>
+
+  <div id="hist-timeline" style="display:none">
+    <div class="card">
+      <div class="card-title">Full History Timeline</div>
+      <div class="timeline" id="history-timeline"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: VACCINATIONS
+══════════════════════════════════════ -->
+<div class="section" id="section-vaccinations">
+  <div class="section-title"><span class="title-icon">💉</span> Vaccination History</div>
+  <div class="card">
+    <div class="card-title">Add Vaccination</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Vaccine Name</label><input class="input" id="vax-name" placeholder="e.g. COVID-19 Booster, Flu Shot, Tdap" onkeydown="if(event.key==='Enter')addVaccination()"></div>
+      <div class="form-group"><label>Date Received</label><input class="input" type="date" id="vax-date"></div>
+      <div class="form-group"><label>Booster Due</label><input class="input" type="date" id="vax-booster"></div>
+      <div class="form-group"><label>Location</label><input class="input" id="vax-location" placeholder="CVS, Doctor's office..."></div>
+      <div class="form-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn btn-primary" onclick="addVaccination()">+ Add</button></div>
+    </div>
+  </div>
+  <div id="vaccinations-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: VISION & DENTAL
+══════════════════════════════════════ -->
+<div class="section" id="section-vision-dental">
+  <div class="section-title"><span class="title-icon">👁️</span> Vision &amp; Dental</div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchVDTab('vision',this)">Vision</div>
+    <div class="tab" onclick="switchVDTab('dental',this)">Dental</div>
+  </div>
+  <div id="vd-vision">
+    <div class="card">
+      <div class="card-title">Eye Prescription</div>
+      <div class="form-row">
+        <div class="form-group"><label>Right Eye (OD) Sphere</label><input class="input" id="eye-od-sphere" placeholder="-2.50" oninput="saveVision()"></div>
+        <div class="form-group"><label>OD Cylinder</label><input class="input" id="eye-od-cyl" placeholder="-0.75" oninput="saveVision()"></div>
+        <div class="form-group"><label>OD Axis</label><input class="input" id="eye-od-axis" placeholder="180" oninput="saveVision()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Left Eye (OS) Sphere</label><input class="input" id="eye-os-sphere" placeholder="-2.00" oninput="saveVision()"></div>
+        <div class="form-group"><label>OS Cylinder</label><input class="input" id="eye-os-cyl" placeholder="-0.50" oninput="saveVision()"></div>
+        <div class="form-group"><label>OS Axis</label><input class="input" id="eye-os-axis" placeholder="175" oninput="saveVision()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Last Eye Exam</label><input class="input" type="date" id="eye-exam-date" oninput="saveVision()"></div>
+        <div class="form-group"><label>Next Exam Due</label><input class="input" type="date" id="eye-exam-next" oninput="saveVision()"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Eye Doctor</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Name</label><input class="input" id="eye-doctor" placeholder="Dr. Vision" oninput="saveVision()"></div>
+        <div class="form-group"><label>Phone</label><input class="input" id="eye-phone" placeholder="(555) 000-0000" oninput="saveVision()"></div>
+        <div class="form-group" style="flex:2"><label>Address</label><input class="input" id="eye-address" placeholder="123 Eye Care Blvd" oninput="saveVision()"></div>
+      </div>
+    </div>
+  </div>
+  <div id="vd-dental" style="display:none">
+    <div class="card">
+      <div class="card-title">Dental Information</div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Dentist Name</label><input class="input" id="dent-name" placeholder="Dr. Smile" oninput="saveDental()"></div>
+        <div class="form-group"><label>Phone</label><input class="input" id="dent-phone" placeholder="(555) 000-0000" oninput="saveDental()"></div>
+        <div class="form-group" style="flex:2"><label>Address</label><input class="input" id="dent-address" placeholder="123 Dental Blvd" oninput="saveDental()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Last Cleaning</label><input class="input" type="date" id="dent-last" oninput="saveDental()"></div>
+        <div class="form-group"><label>Next Cleaning</label><input class="input" type="date" id="dent-next" oninput="saveDental()"></div>
+      </div>
+      <div class="form-row"><div class="form-group"><label>Notes</label><textarea class="textarea" id="dent-notes" placeholder="Braces, implants, cavities history..." style="min-height:70px" oninput="saveDental()"></textarea></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MEDICAL DEVICES
+══════════════════════════════════════ -->
+<div class="section" id="section-devices">
+  <div class="section-title"><span class="title-icon">🔧</span> Medical Devices</div>
+  <div class="card">
+    <div class="card-title">Add Device</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Device Name</label><input class="input" id="dev-name" placeholder="e.g. Pacemaker, CPAP, Insulin Pump" onkeydown="if(event.key==='Enter')addDevice()"></div>
+      <div class="form-group"><label>Type</label><select class="select" id="dev-type"><option>Pacemaker</option><option>CPAP/BiPAP</option><option>Insulin Pump</option><option>Hearing Aid</option><option>Cochlear Implant</option><option>Prosthetic</option><option>Defibrillator (ICD)</option><option>Stent</option><option>Other Implant</option><option>External Device</option></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Serial Number</label><input class="input" id="dev-serial" placeholder="SN123456"></div>
+      <div class="form-group"><label>Date Implanted / Issued</label><input class="input" type="date" id="dev-date"></div>
+      <div class="form-group"><label>Warranty / Next Service</label><input class="input" type="date" id="dev-warranty"></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label>Service Notes</label><input class="input" id="dev-notes" placeholder="e.g. Pacemaker battery replace by 2027, settings: 70bpm floor"></div></div>
+    <button class="btn btn-primary" onclick="addDevice()">+ Add Device</button>
+  </div>
+  <div id="devices-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: SYMPTOM JOURNAL
+══════════════════════════════════════ -->
+<div class="section" id="section-symptom-journal">
+  <div class="section-title"><span class="title-icon">📝</span> Symptom Journal</div>
+  <div class="upgrade-banner" id="sj-upgrade-banner" style="display:none">
+    🔒 <span>AI pattern analysis</span> of your symptom history requires Premium. Upgrade in Settings.
+  </div>
+  <div class="card">
+    <div class="card-title">Log Symptom</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:3"><label>Symptom Description</label><input class="input" id="sj-text" placeholder="e.g. Persistent headache, left temple, throbbing"></div>
+      <div class="form-group"><label>Date &amp; Time</label><input class="input" type="datetime-local" id="sj-datetime"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Severity: <span id="sj-severity-val" class="range-value">5</span> / 10</label>
+      <input type="range" min="1" max="10" value="5" id="sj-severity" oninput="document.getElementById('sj-severity-val').textContent=this.value">
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="addSymptom()">+ Log Symptom</button>
+      <button class="btn btn-secondary" id="btn-analyze-symptoms" onclick="analyzeSymptoms()">🤖 AI Pattern Analysis</button>
+    </div>
+    <div id="sj-ai-result" style="margin-top:12px"></div>
+  </div>
+  <div id="symptom-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: HEALTH GOALS
+══════════════════════════════════════ -->
+<div class="section" id="section-health-goals">
+  <div class="section-title"><span class="title-icon">🎯</span> Health Goals</div>
+  <div class="card">
+    <div class="card-title">Add Goal</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Goal Name</label><input class="input" id="goal-name" placeholder="e.g. Lose 15 lbs, Lower blood pressure, Walk 10K steps/day"></div>
+      <div class="form-group"><label>Target Value</label><input class="input" id="goal-target" placeholder="e.g. 165 lbs, 120/80"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Current Value</label><input class="input" id="goal-current" placeholder="e.g. 180 lbs"></div>
+      <div class="form-group"><label>Target Date</label><input class="input" type="date" id="goal-date"></div>
+      <div class="form-group" style="flex:2"><label>Notes</label><input class="input" id="goal-notes" placeholder="Strategy, progress notes..."></div>
+      <div class="form-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn btn-primary" onclick="addGoal()">+ Add</button></div>
+    </div>
+  </div>
+  <div id="goals-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: FAMILY PROFILES
+══════════════════════════════════════ -->
+<div class="section" id="section-family">
+  <div class="section-title"><span class="title-icon">👨‍👩‍👧</span> Family Profiles</div>
+  <p style="font-size:14px;color:var(--text-secondary);margin-bottom:18px">Each profile has its own complete, separate health record. Switch profiles from the header.</p>
+  <div class="card">
+    <div class="card-title">Add Family Member</div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2"><label>Name</label><input class="input" id="fam-name" placeholder="e.g. Jane Smith" onkeydown="if(event.key==='Enter')addFamilyProfile()"></div>
+      <div class="form-group"><label>Relationship</label><input class="input" id="fam-rel" placeholder="Spouse, Child, Parent..."></div>
+      <div class="form-group"><label>Date of Birth</label><input class="input" type="date" id="fam-dob"></div>
+      <div class="form-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn btn-primary" onclick="addFamilyProfile()">+ Add Profile</button></div>
+    </div>
+  </div>
+  <div id="family-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: SETTINGS
+══════════════════════════════════════ -->
+<div class="section" id="section-settings">
+  <div class="section-title"><span class="title-icon">⚙️</span> Settings</div>
+  <div class="card">
+    <div class="card-title">🔒 Security &amp; Access PINs</div>
+    <div class="two-col" style="gap:16px;margin-bottom:16px">
+      <div>
+        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Owner PIN <span class="badge badge-teal" style="font-size:10px">Full Access</span></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Full access — edit, delete, all sections</div>
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group"><label>New PIN (4–6 digits)</label><input class="input" type="password" id="owner-pin-input" placeholder="••••" maxlength="6"></div>
+          <div class="form-group"><label>Confirm PIN</label><input class="input" type="password" id="owner-pin-confirm" placeholder="••••" maxlength="6"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveOwnerPin()" style="margin-top:8px">Save Owner PIN</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearOwnerPin()" style="margin-top:8px">Clear PIN</button>
+        <div id="owner-pin-msg" style="font-size:12px;margin-top:6px"></div>
+      </div>
+      <div>
+        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Caregiver PIN <span class="badge badge-orange" style="font-size:10px">View + Add</span></div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Can view and add records — cannot delete or edit existing</div>
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group"><label>New PIN (4–6 digits)</label><input class="input" type="password" id="cg-pin-input" placeholder="••••" maxlength="6"></div>
+          <div class="form-group"><label>Confirm PIN</label><input class="input" type="password" id="cg-pin-confirm" placeholder="••••" maxlength="6"></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveCaregiverPin()" style="margin-top:8px">Save Caregiver PIN</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearCaregiverPin()" style="margin-top:8px">Clear PIN</button>
+        <div id="cg-pin-msg" style="font-size:12px;margin-top:6px"></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-hover);border-radius:8px;padding:12px;font-size:13px;color:var(--text-muted)">
+      🔓 The Emergency View is <strong style="color:var(--text-secondary)">always accessible</strong> without a PIN — it's designed for first responders.
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⭐ Subscription</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div id="sub-status-display" style="font-size:18px;font-weight:700;margin-bottom:6px"></div>
+        <div style="font-size:13px;color:var(--text-secondary)">AI features (drug interactions, lab analysis, pattern detection) require Premium.</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Premium is $3/month in LCAI tokens.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="togglePremium()" id="btn-toggle-premium">Upgrade to Premium</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">💾 Data</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="exportData()">⬇️ Export All Data (JSON)</button>
+      <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">All data is stored privately on this device in browser storage. Nothing is sent to any server except transient AI analysis requests, which contain no personally identifying information.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">ℹ️ About MyICE</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.7">
+      <p><strong style="color:var(--text-primary)">MyICE ⚕️</strong> is your personal health vault and emergency medical ID. ICE stands for <em>In Case of Emergency</em> — a standard recognized by paramedics, police, and ER doctors worldwide.</p>
+      <br>
+      <p><strong style="color:var(--accent)">Your privacy is our core promise.</strong> All health data lives only on your device in browser localStorage. We never see it, store it, or sell it.</p>
+      <br>
+      <p style="color:var(--warning)">⚠️ <strong>Not a substitute for medical advice.</strong> MyICE is an organizational tool. Always consult your healthcare provider for medical decisions. In an emergency, call 911.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: MY HEALTH APPS
+══════════════════════════════════════ -->
+<div class="section" id="section-healthapps">
+  <div class="section-title"><span class="title-icon">🔗</span> My Health Apps</div>
+
+  <div class="card">
+    <div class="card-title">Quick Launch</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Add your patient portals and health apps for one-tap access. Examples: MyChart, VA Health, Healow, Kaiser, Cleveland Clinic, Epic, Athena — whatever your doctors use.</div>
+    <div id="healthapps-list"></div>
+    <div style="margin-top:16px">
+      <div class="two-col" style="gap:10px;margin-bottom:10px">
+        <input id="ha-name" class="form-input" placeholder="App name (e.g. MyChart)" style="flex:1">
+        <input id="ha-icon" class="form-input" placeholder="Icon emoji 🏥" style="width:80px;text-align:center">
+      </div>
+      <input id="ha-url" class="form-input" placeholder="Website or URL (e.g. https://mychart.org)" style="width:100%;margin-bottom:10px">
+      <input id="ha-notes" class="form-input" placeholder="Notes (optional — e.g. primary care portal)" style="width:100%;margin-bottom:10px">
+      <button class="btn btn-primary" onclick="addHealthApp()">+ Add App</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📥 Import Records — Have AI Explain Them</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:16px">
+      Download your health records from any patient portal and import them here. The AI will read the file, explain what it says in plain English, and flag anything important.
+      <br><br>
+      Accepts: <strong>PDF, text files, or CCDA/XML</strong> (the standard export format used by most major health systems).
+    </div>
+
+    <div style="background:var(--bg-secondary);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--text-muted);line-height:1.9">
+      <strong style="color:var(--text-secondary)">How to export from most patient portals:</strong><br>
+      Look for options like: <em>Health Summary · Download My Record · Export · Share Record · Blue Button Download · CCDA · Health Data</em><br>
+      Choose CCDA, XML, or PDF format if given a choice. CCDA/XML gives the AI the most structured data to work with.
+    </div>
+
+    <div id="import-drop-zone" onclick="document.getElementById('import-file-input').click()"
+      style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:border-color 0.2s"
+      ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+      ondragleave="this.style.borderColor='var(--border)'"
+      ondrop="handleImportDrop(event)">
+      <div style="font-size:36px;margin-bottom:8px">📂</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text-primary)">Tap to select file or drag &amp; drop</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">PDF · TXT · XML · CCDA</div>
+      <input type="file" id="import-file-input" accept=".pdf,.txt,.xml,.ccda,.json" style="display:none" onchange="handleImportFile(this)">
+    </div>
+
+    <div id="import-ai-result" style="margin-top:16px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ℹ️ About Connected Apps</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
+      <p>MyICE does not automatically sync with any apps — your health data stays on your device and is never shared without your action. Importing a file is always a manual step you initiate.</p>
+      <br>
+      <p>Full automatic sync using the FHIR health data standard is planned for a future version.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: HELP & FAQ
+══════════════════════════════════════ -->
+<div class="section" id="section-help">
+  <div class="section-title"><span class="title-icon">💡</span> Help &amp; FAQ</div>
+
+  <div class="card">
+    <div class="card-title">What is MyICE?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p><strong style="color:var(--text-primary)">MyICE ⚕️</strong> is your personal health vault and emergency medical ID. ICE stands for <em>In Case of Emergency</em> — a universal standard recognized by paramedics, police, and ER doctors worldwide.</p>
+      <br>
+      <p>You store your health information once, and it is available instantly — whether you need to share it with a new doctor, hand your phone to a paramedic, or look up a medication while traveling.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Is my data private?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Yes. <strong style="color:var(--accent)">All health data is stored on your device only</strong> — in your browser's local storage. It never leaves your phone or computer unless you explicitly share it. We have no server storing your records. No one at MyICE can see your data.</p>
+      <br>
+      <p>The only time data leaves your device is when you use an AI feature (like Lab Analysis or Drug Interaction Check). In that case, only the specific text you submit is sent to our AI server for processing — and it is discarded immediately after. No personal information is retained on our servers.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">What is the Emergency tab?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>The Emergency tab is the first button on the screen — a large red button that anyone can tap without a PIN or login. It shows only the information you have chosen to make emergency-visible, such as your blood type, allergies, current medications, emergency contacts, and DNR status.</p>
+      <br>
+      <p><strong>How to set it up:</strong> In each section (Allergies, Medications, Conditions, etc.), look for the "Show in Emergency" toggle on each entry. Turn it on for anything you want paramedics or ER staff to see instantly.</p>
+      <br>
+      <p>You control exactly what is visible. Everything else stays completely private.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How do Medical Alerts work?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Medical Alerts are bold warning banners shown at the very top of the app — visible to anyone who opens it, before they even tap Emergency. Think of them as a digital version of a medical alert bracelet.</p>
+      <br>
+      <p>Examples: <strong>⚠️ DIABETIC</strong> · <strong>⚠️ DO NOT RESUSCITATE</strong> · <strong>⚠️ SEVERE PENICILLIN ALLERGY</strong> · <strong>⚠️ ALZHEIMER'S PATIENT</strong></p>
+      <br>
+      <p>Go to the <strong>Medical Alerts</strong> section in the sidebar to add, edit, or remove alerts. You decide what is shown and what stays private.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">What is the PIN system?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>MyICE has two PIN levels to protect your records:</p>
+      <br>
+      <p><strong style="color:var(--accent)">Owner PIN</strong> — Full access. Add, edit, and delete anything. Set this in Settings.</p>
+      <br>
+      <p><strong style="color:var(--text-secondary)">Caregiver PIN</strong> — Limited access. A family member or caregiver can view records and add new entries, but cannot edit or delete existing records. Set this in Settings.</p>
+      <br>
+      <p><strong>Emergency View</strong> — No PIN needed. Anyone can tap Emergency and see only what you marked as emergency-visible. They cannot access anything else in the app.</p>
+      <br>
+      <p>If you do not set a PIN, the app is fully open. We recommend setting at least an Owner PIN to protect your private health records.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">What are the free vs. paid AI features?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p><strong style="color:var(--success)">Free — always included:</strong></p>
+      <ul style="margin:8px 0 12px 20px;line-height:2">
+        <li>Emergency tab and Medical Alerts</li>
+        <li>All health record storage (conditions, medications, allergies, contacts, history, vitals, appointments, billing, and more)</li>
+        <li>Vitals graphs and tracking</li>
+        <li>Symptom journal</li>
+        <li>Doctor questions notepad</li>
+        <li>Family profiles</li>
+      </ul>
+      <p><strong style="color:var(--accent)">Premium AI features — $3/month in LCAI:</strong></p>
+      <ul style="margin:8px 0 0 20px;line-height:2">
+        <li>Lab result analysis — plain-English explanation of your blood work</li>
+        <li>Drug interaction checker — AI scans your full medication list for conflicts</li>
+        <li>Medication explainer — what each drug does, side effects, warnings</li>
+        <li>Document AI — upload a medical document, AI reads and files it</li>
+        <li>Symptom pattern analysis — AI spots trends in your journal</li>
+        <li>Appointment question suggester — personalized questions for your next visit</li>
+        <li>AI health assistant chat</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How do I pay for Premium?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Premium is billed monthly in LCAI — the native token of the Lightchain AI network. Payment is made directly from your crypto wallet (Trust Wallet or any WalletConnect-compatible wallet).</p>
+      <br>
+      <p>To subscribe, go to <strong>Settings</strong> and tap <strong>Upgrade to Premium</strong>. You will be prompted to send the current monthly amount in LCAI to activate your subscription.</p>
+      <br>
+      <p>LCAI can be purchased on major crypto exchanges and DEXes. You can also bridge LCAI to Lightchain mainnet at <a href="https://bridge.lightchain.ai" target="_blank" style="color:var(--accent)">bridge.lightchain.ai</a>.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">What happens if I clear my browser data?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Because your data is stored in browser localStorage, clearing your browser's site data will erase your MyICE records. <strong style="color:var(--warning)">Always export a backup before clearing browser data.</strong></p>
+      <br>
+      <p>To export your data, go to <strong>Settings → Export My Data</strong>. This creates a JSON backup file you can save to your device.</p>
+      <br>
+      <p>This is also why we recommend using MyICE on a device you own and trust — not a public or shared computer.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How do I add a family member's profile?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Go to <strong>Family Profiles</strong> in the sidebar and tap <strong>Add Profile</strong>. Give it a name (e.g. "Mom", "Dad", "My Child"). Each profile is fully separate — its own records, emergency info, and settings.</p>
+      <br>
+      <p>Switch between profiles using the profile selector at the top of the app. Each profile can have its own Owner and Caregiver PINs.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Is MyICE available on mobile?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>Yes — MyICE is a web app that works on any device with a browser, including iPhone and Android. Open it in your phone's browser (Safari, Chrome, etc.) and add it to your home screen for instant one-tap access.</p>
+      <br>
+      <p><strong>On iPhone:</strong> Tap the Share button in Safari → Add to Home Screen.</p>
+      <p><strong>On Android:</strong> Tap the menu in Chrome → Add to Home Screen.</p>
+      <br>
+      <p>This puts a MyICE icon on your home screen that opens like an app — no app store download needed.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Who do I contact for support?</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>MyICE is built by the OrcaPod team on the Lightchain AI network. For support questions, please visit the <a href="https://discord.gg/lightchain" target="_blank" style="color:var(--accent)">Lightchain Discord</a> and ask in the community channel.</p>
+      <br>
+      <p>Please read the <strong>Terms &amp; Disclaimers</strong> section for important information about the limits of this service.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: TERMS & DISCLAIMERS
+══════════════════════════════════════ -->
+<div class="section" id="section-terms">
+  <div class="section-title"><span class="title-icon">📋</span> Terms &amp; Disclaimers</div>
+
+  <div class="card" style="border-left:3px solid var(--warning)">
+    <div class="card-title" style="color:var(--warning)">⚠️ Not Medical Advice</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p><strong>MyICE ⚕️ is not a medical device, medical service, or healthcare provider.</strong> Nothing in this application — including any AI-generated analysis, summaries, drug interaction checks, lab result explanations, symptom assessments, or suggested questions — constitutes medical advice, diagnosis, or treatment.</p>
+      <br>
+      <p>All AI-generated content is provided for informational and organizational purposes only. It may be incomplete, inaccurate, or not applicable to your specific health situation. <strong>Always consult a qualified, licensed healthcare professional</strong> before making any medical decision, changing a medication, or acting on any information provided by this app.</p>
+      <br>
+      <p>In a medical emergency, <strong>call 911 immediately</strong>. Do not rely on this app in place of emergency medical services.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">No Warranties — Service Provided "As Is"</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>MyICE is provided <strong>"as is"</strong> and <strong>"as available"</strong> without warranties of any kind, express or implied. We make no guarantees regarding the accuracy, completeness, reliability, or fitness for any particular purpose of any content, feature, or AI analysis provided by this application.</p>
+      <br>
+      <p>We do not warrant that the service will be uninterrupted, error-free, or free of harmful components. The service may be modified, suspended, or permanently discontinued at any time, with or without notice.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Service Availability</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>MyICE may experience temporary or permanent outages. AI features depend on the Lightchain AIVM network, third-party infrastructure, and blockchain availability — none of which we control or guarantee.</p>
+      <br>
+      <p><strong>The service may go offline temporarily or permanently at any time.</strong> We are not liable for any loss of access, loss of data, or inability to use the service for any reason, including planned or unplanned downtime.</p>
+      <br>
+      <p><strong>Do not rely on MyICE as your only copy of critical health information.</strong> Always maintain separate copies of important medical documents with your healthcare providers and in your own secure storage.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">No Refunds</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>All payments for Premium AI features are made in LCAI cryptocurrency and are <strong>final and non-refundable</strong>. Due to the nature of blockchain transactions, payments cannot be reversed once confirmed on-chain.</p>
+      <br>
+      <p>By making a payment, you acknowledge that you understand cryptocurrency transactions are irreversible and that you are not entitled to a refund under any circumstances, including service downtime, dissatisfaction with AI results, or permanent discontinuation of the service.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Limitation of Liability</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>To the fullest extent permitted by applicable law, the creators, operators, and contributors of MyICE shall not be liable for any direct, indirect, incidental, special, consequential, or punitive damages arising from your use of — or inability to use — this application or its AI features.</p>
+      <br>
+      <p>This includes but is not limited to: any harm resulting from reliance on AI-generated health information, loss of stored health data, unauthorized access to your device or records, service outages, or any medical decision made based on information displayed in this app.</p>
+      <br>
+      <p>Your use of MyICE is entirely at your own risk.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Your Data &amp; Privacy</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>All health data you enter into MyICE is stored <strong>on your device only</strong> using browser localStorage. We do not collect, transmit, store, or sell your personal health information.</p>
+      <br>
+      <p>When you use Premium AI features, the text you submit (such as lab results or symptom descriptions) is sent to our AI processing server solely for the purpose of generating a response. This data is processed in memory and discarded immediately — it is never logged, stored, or associated with any identity.</p>
+      <br>
+      <p>You are solely responsible for the security of your device and any PINs you set. We cannot recover lost data or reset PINs on your behalf.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">AI Accuracy &amp; Limitations</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>AI-generated responses are produced by large language models and <strong>may contain errors, omissions, or outdated information</strong>. Drug interaction databases, lab reference ranges, and medical guidelines change over time. The AI may not reflect the most current medical standards.</p>
+      <br>
+      <p>AI analysis is based solely on the text you provide. It has no access to your full medical history, cannot examine you, and cannot account for individual factors that a physician would consider. Any output should be treated as a starting point for conversation with your doctor — not a conclusion.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Changes to These Terms</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p>These terms may be updated at any time. Continued use of MyICE after any update constitutes acceptance of the revised terms. We encourage you to review this section periodically.</p>
+      <br>
+      <p><em>By using MyICE, you acknowledge that you have read, understood, and agreed to all terms and disclaimers on this page.</em></p>
+    </div>
+  </div>
+</div>
+
+    </main>
+  </div><!-- end app-body -->
+</div><!-- end app-shell -->
+
+<!-- ══════════════════════════════════════
+     ORCAPOD STRIP
+══════════════════════════════════════ -->
+<div class="orcapod-strip">
+  <span class="orcapod-label">🐬 OrcaPod:</span>
+  <a href="#" class="orca-link">OrcaMail</a>
+  <span class="orca-divider">·</span>
+  <a href="#" class="orca-link">OrcaFiles</a>
+  <span class="orca-divider">·</span>
+  <a href="#" class="orca-link">OrcaGuard</a>
+  <span class="orca-divider">·</span>
+  <a href="#" class="orca-link">OrcaMint</a>
+  <span class="orca-divider">·</span>
+  <a href="#" class="orca-link">OrcaLearn</a>
+  <span class="orca-divider">·</span>
+  <a href="#" class="orca-link">SmartContract Explainer</a>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  MyICE ⚕️ — Complete Application Logic
+// ═══════════════════════════════════════════════════════════
+
+// ── CONSTANTS & STATE ──
+const BACKEND = 'https://web-production-a6add.up.railway.app';
+const STORAGE_PREFIX = 'myice_';
+let activeProfileId = 'default';
+let sessionAuth = null; // null | 'owner' | 'caregiver'
+let pinCallback = null;
+let pinBuffer = '';
+let vitalsRange = '7d';
+let chartInstances = {};
+
+// ── STORAGE HELPERS ──
+function pk(key) { return `${STORAGE_PREFIX}${activeProfileId}_${key}`; }
+function gd(key, def=[]) {
+  try { const v=localStorage.getItem(pk(key)); return v ? JSON.parse(v) : def; }
+  catch(e) { return def; }
+}
+function sd(key, val) { localStorage.setItem(pk(key), JSON.stringify(val)); }
+function getSettings() {
+  try { const v=localStorage.getItem(`${STORAGE_PREFIX}settings`); return v ? JSON.parse(v) : {ownerPin:'',caregiverPin:'',isPremium:false}; }
+  catch(e) { return {ownerPin:'',caregiverPin:'',isPremium:false}; }
+}
+function saveSettings(s) { localStorage.setItem(`${STORAGE_PREFIX}settings`, JSON.stringify(s)); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmt(date) {
+  if(!date) return '—';
+  try { return new Date(date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+  catch(e) { return date; }
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function isPremium() { return getSettings().isPremium; }
+
+// ── PIN SYSTEM ──
+function requireAuth(cb) {
+  const s = getSettings();
+  if (!s.ownerPin && !s.caregiverPin) { sessionAuth='owner'; cb(); return; }
+  if (sessionAuth) { cb(); return; }
+  pinCallback = cb;
+  openPinModal();
+}
+
+function openPinModal() {
+  const s = getSettings();
+  pinBuffer = '';
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  document.getElementById('pin-skip-btn').style.display = (!s.ownerPin && !s.caregiverPin) ? 'block':'none';
+  document.getElementById('pin-modal').classList.add('visible');
+}
+
+function pinPress(k) {
+  const s = getSettings();
+  if (k === 'clr') { pinBuffer=''; updatePinDots(); return; }
+  if (k === 'del') { pinBuffer=pinBuffer.slice(0,-1); updatePinDots(); return; }
+  if (pinBuffer.length >= 6) return;
+  pinBuffer += k;
+  updatePinDots();
+  // auto-check when length matches a pin
+  const maxLen = Math.max(s.ownerPin.length||0, s.caregiverPin.length||0) || 4;
+  if (pinBuffer.length >= (s.ownerPin||s.caregiverPin).length) {
+    setTimeout(checkPin, 100);
+  }
+}
+
+function updatePinDots() {
+  for(let i=0;i<6;i++) {
+    const dot = document.getElementById('dot-'+i);
+    if(dot) dot.classList.toggle('filled', i < pinBuffer.length);
+  }
+}
+
+function checkPin() {
+  const s = getSettings();
+  const errEl = document.getElementById('pin-error');
+  if (pinBuffer === s.ownerPin && s.ownerPin) {
+    sessionAuth = 'owner';
+    document.getElementById('pin-modal').classList.remove('visible');
+    pinBuffer = ''; updatePinDots();
+    if(pinCallback) { const cb=pinCallback; pinCallback=null; cb(); }
+    return;
+  }
+  if (pinBuffer === s.caregiverPin && s.caregiverPin) {
+    sessionAuth = 'caregiver';
+    document.getElementById('pin-modal').classList.remove('visible');
+    pinBuffer = ''; updatePinDots();
+    if(pinCallback) { const cb=pinCallback; pinCallback=null; cb(); }
+    return;
+  }
+  errEl.textContent = 'Incorrect PIN. Try again.';
+  pinBuffer = ''; updatePinDots();
+}
+
+function pinSkip() {
+  sessionAuth = 'owner';
+  document.getElementById('pin-modal').classList.remove('visible');
+  if(pinCallback) { const cb=pinCallback; pinCallback=null; cb(); }
+}
+
+function isOwner() { return sessionAuth === 'owner'; }
+function lockBtns(el) {
+  // gray out edit/delete if caregiver
+  if(!isOwner()) {
+    el.querySelectorAll('.owner-only').forEach(b=>{ b.classList.add('btn-locked'); b.disabled=true; });
+  }
+}
+
+// ── NAVIGATION ──
+function navTo(section) {
+  requireAuth(() => showSection(section));
+}
+
+function showSection(name) {
+  // hide all
+  document.querySelectorAll('.section').forEach(s => s.style.display='none');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('section-'+name);
+  if(el) el.style.display='block';
+  const navEl = document.querySelector(`[data-section="${name}"]`);
+  if(navEl) navEl.classList.add('active');
+  closeSidebar();
+  // section-specific inits
+  if(name==='dashboard') renderDashboard();
+  if(name==='vitals') { setVitalsDatetime(); renderVitals(); }
+  if(name==='profile') loadProfileForm();
+  if(name==='alerts') renderAlerts();
+  if(name==='conditions') renderConditions();
+  if(name==='medications') { renderMedications(); showAIBanner(!isPremium(),'med-upgrade-banner'); }
+  if(name==='allergies') renderAllergies();
+  if(name==='lab-results') { renderLabResults(); showAIBanner(!isPremium(),'lab-upgrade-banner'); }
+  if(name==='documents') { renderDocuments(); showAIBanner(!isPremium(),'doc-upgrade-banner'); }
+  if(name==='appointments') { renderAppointments(); populateApptSelect(); }
+  if(name==='questions') { renderQuestions(); populateApptSelect(); showAIBanner(!isPremium(),'q-upgrade-banner'); }
+  if(name==='care-team') renderCareTeam();
+  if(name==='emergency-contacts') renderEmergencyContacts();
+  if(name==='billing') { loadInsuranceForm(); renderBills(); }
+  if(name==='history') renderHistory();
+  if(name==='vaccinations') renderVaccinations();
+  if(name==='vision-dental') loadVisionDentalForm();
+  if(name==='devices') renderDevices();
+  if(name==='symptom-journal') { setSymptomDatetime(); renderSymptoms(); showAIBanner(!isPremium(),'sj-upgrade-banner'); }
+  if(name==='health-goals') renderGoals();
+  if(name==='family') renderFamilyProfiles();
+  if(name==='settings') loadSettingsPage();
+  if(name==='healthapps') renderHealthApps();
+}
+
+function showAIBanner(show, id) {
+  const el=document.getElementById(id);
+  if(el) el.style.display=show?'flex':'none';
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('visible');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('visible');
+}
+
+// ── EMERGENCY VIEW ──
+function showEmergency() {
+  renderEmergencyView();
+  document.getElementById('emergency-overlay').classList.add('visible');
+}
+function hideEmergency() {
+  document.getElementById('emergency-overlay').classList.remove('visible');
+}
+
+function renderEmergencyView() {
+  const profile = gd('profile', {});
+  const alerts = gd('alerts',[]);
+  const conditions = gd('conditions',[]);
+  const medications = gd('medications',[]);
+  const allergies = gd('allergies',[]);
+  const contacts = gd('emergency_contacts',[]);
+  const careTeam = gd('care_team',[]);
+
+  let html = '';
+
+  // Alert banners
+  const visAlerts = alerts.filter(a=>a.active!==false);
+  if(visAlerts.length) {
+    html += '<div style="margin-bottom:20px">';
+    visAlerts.forEach(a=>{
+      const cls = a.severity==='critical'?'critical':'important';
+      html += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span>${esc(a.text)}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // Identity
+  html += '<div class="em-card"><div class="em-card-title">Patient Information</div><div class="em-info-grid">';
+  if(profile.visName!==false && profile.name) html += `<div><div class="em-info-label">Name</div><div class="em-info-value">${esc(profile.name)}</div></div>`;
+  if(profile.visDob!==false && profile.dob) html += `<div><div class="em-info-label">Date of Birth</div><div class="em-info-value">${fmt(profile.dob)}</div></div>`;
+  if(profile.visBlood!==false && profile.bloodType) html += `<div><div class="em-info-label">Blood Type</div><div class="em-info-value" style="color:var(--emergency)">${esc(profile.bloodType)}</div></div>`;
+  if(profile.visOrgan!==false && profile.organDonor) html += `<div><div class="em-info-label">Organ Donor</div><div class="em-info-value">${esc(profile.organDonor)}</div></div>`;
+  if(profile.visAddress!==false && profile.address) html += `<div style="grid-column:span 2"><div class="em-info-label">Home Address</div><div class="em-info-value" style="font-size:15px">${esc(profile.address)}</div></div>`;
+  html += '</div></div>';
+
+  // Conditions
+  const visCond = conditions.filter(c=>c.emergencyVisible!==false);
+  html += '<div class="em-card"><div class="em-card-title">Medical Conditions</div>';
+  if(visCond.length) visCond.forEach(c=>{ html+=`<div class="em-list-row">${esc(c.name)}${c.status&&c.status!=='Active'?` <span style="font-size:12px;opacity:0.6">(${esc(c.status)})</span>`:''}</div>`; });
+  else html+='<div class="em-empty">None listed</div>';
+  html += '</div>';
+
+  // Medications
+  const visMeds = medications.filter(m=>m.emergencyVisible!==false);
+  html += '<div class="em-card"><div class="em-card-title">Current Medications</div>';
+  if(visMeds.length) visMeds.forEach(m=>{ html+=`<div class="em-list-row"><strong>${esc(m.name)}</strong> ${esc(m.dose||'')} — ${esc(m.freq||'')}</div>`; });
+  else html+='<div class="em-empty">None listed</div>';
+  html += '</div>';
+
+  // Allergies
+  const visAllergies = allergies.filter(a=>a.emergencyVisible!==false);
+  html += '<div class="em-card"><div class="em-card-title">⚠️ Allergies</div>';
+  if(visAllergies.length) visAllergies.forEach(a=>{ const sev=a.severity; const color=sev==='Anaphylaxis'||sev==='Severe'?'var(--emergency)':sev==='Moderate'?'var(--warning)':'inherit'; html+=`<div class="em-list-row"><span style="color:${color};font-weight:700">${esc(a.name)}</span> — ${esc(sev)} ${a.reaction?'· '+esc(a.reaction):''}</div>`; });
+  else html+='<div class="em-empty">None listed</div>';
+  html += '</div>';
+
+  // Emergency contacts
+  html += '<div class="em-card"><div class="em-card-title">Emergency Contacts</div>';
+  if(contacts.length) contacts.forEach(c=>{ html+=`<div class="em-contact"><div class="em-contact-info"><div class="em-contact-name">${esc(c.name)}</div><div class="em-contact-rel">${esc(c.relationship)}</div></div><a href="tel:${esc(c.phone)}" class="em-contact-phone">${esc(c.phone)}</a></div>`; });
+  else html+='<div class="em-empty">No emergency contacts added</div>';
+  html += '</div>';
+
+  // Primary doctor
+  const primaryDoc = careTeam.find(c=>c.role==='Primary Care');
+  if(primaryDoc) {
+    html += `<div class="em-card"><div class="em-card-title">Primary Physician</div><div class="em-info-grid"><div><div class="em-info-label">Doctor</div><div class="em-info-value" style="font-size:16px">${esc(primaryDoc.name)}</div></div><div><div class="em-info-label">Phone</div><a href="tel:${esc(primaryDoc.phone)}" class="em-contact-phone" style="font-size:18px">${esc(primaryDoc.phone||'—')}</a></div></div></div>`;
+  }
+
+  document.getElementById('em-body').innerHTML = html;
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const profile = gd('profile',{});
+  const alerts = gd('alerts',[]);
+  const conditions = gd('conditions',[]);
+  const medications = gd('medications',[]);
+  const appointments = gd('appointments',[]);
+  const vitals = gd('vitals',[]);
+
+  // Alert banners
+  let alertHtml = '';
+  alerts.filter(a=>a.active!==false).forEach(a=>{
+    const cls=a.severity==='critical'?'critical':'important';
+    alertHtml += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span>${esc(a.text)}</div>`;
+  });
+  document.getElementById('dash-alerts-area').innerHTML = alertHtml;
+
+  // Stats
+  const today = new Date(); today.setHours(0,0,0,0);
+  const upcoming = appointments.filter(a=>new Date(a.date)>=today).length;
+  const statsHtml = `
+    <div class="stat-card" onclick="navTo('conditions')"><div class="stat-label">Conditions</div><div class="stat-value teal">${conditions.length}</div></div>
+    <div class="stat-card" onclick="navTo('medications')"><div class="stat-label">Medications</div><div class="stat-value teal">${medications.length}</div></div>
+    <div class="stat-card" onclick="navTo('appointments')"><div class="stat-label">Upcoming Appts</div><div class="stat-value ${upcoming>0?'orange':'gray'}">${upcoming}</div></div>
+    <div class="stat-card" onclick="navTo('vitals')"><div class="stat-label">Vitals Entries</div><div class="stat-value teal">${vitals.length}</div></div>
+  `;
+  document.getElementById('dash-stats').innerHTML = statsHtml;
+
+  // Last vitals
+  if(vitals.length) {
+    const last = vitals[vitals.length-1];
+    let vHtml='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    if(last.sys&&last.dia) vHtml+=`<div class="tag">🩸 BP: ${last.sys}/${last.dia}</div>`;
+    if(last.hr) vHtml+=`<div class="tag">❤️ HR: ${last.hr} bpm</div>`;
+    if(last.glucose) vHtml+=`<div class="tag">🍬 BG: ${last.glucose} mg/dL</div>`;
+    if(last.o2) vHtml+=`<div class="tag">💨 O₂: ${last.o2}%</div>`;
+    if(last.temp) vHtml+=`<div class="tag">🌡️ Temp: ${last.temp}°F</div>`;
+    if(last.weight) vHtml+=`<div class="tag">⚖️ ${last.weight} lbs</div>`;
+    vHtml+=`<div style="font-size:12px;color:var(--text-muted);margin-top:4px;width:100%">${fmt(last.datetime)}</div>`;
+    vHtml+='</div>';
+    document.getElementById('dash-last-vitals').innerHTML = vHtml;
+  }
+
+  // Upcoming appointments
+  const sortedAppts = appointments.filter(a=>new Date(a.date)>=today).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,3);
+  if(sortedAppts.length) {
+    let aHtml='';
+    sortedAppts.forEach(a=>{
+      aHtml+=`<div class="list-item"><div class="list-item-content"><div class="list-item-title">${esc(a.doctor)}</div><div class="list-item-subtitle">${fmt(a.date)} ${a.time||''} ${a.specialty?'· '+esc(a.specialty):''}</div></div></div>`;
+    });
+    document.getElementById('dash-appointments').innerHTML=aHtml;
+  } else {
+    document.getElementById('dash-appointments').innerHTML='<div class="empty-state" style="padding:20px"><p>No upcoming appointments</p></div>';
+  }
+
+  // Medications
+  if(medications.length) {
+    let mHtml='<div style="display:flex;flex-wrap:wrap;gap:8px">';
+    medications.slice(0,6).forEach(m=>{ mHtml+=`<span class="badge badge-teal">💊 ${esc(m.name)} ${esc(m.dose||'')}</span>`; });
+    if(medications.length>6) mHtml+=`<span class="badge badge-gray">+${medications.length-6} more</span>`;
+    mHtml+='</div>';
+    document.getElementById('dash-medications').innerHTML=mHtml;
+  } else {
+    document.getElementById('dash-medications').innerHTML='<p style="color:var(--text-muted);font-size:13px">No medications added</p>';
+  }
+
+  // Greet user
+  if(profile.name) {
+    document.title = `MyICE ⚕️ — ${profile.name}`;
+  }
+}
+
+// ── PROFILE ──
+function loadProfileForm() {
+  const p = gd('profile',{});
+  setValue('prof-name',p.name);
+  setValue('prof-dob',p.dob);
+  setValue('prof-address',p.address);
+  setValue('prof-phone',p.phone);
+  setValue('prof-blood',p.bloodType);
+  setValue('prof-organ',p.organDonor);
+  setValue('prof-sex',p.sex);
+  // Visibility toggles
+  const fields = [
+    {id:'visName',label:'Name',key:'name'},
+    {id:'visDob',label:'Date of Birth',key:'dob'},
+    {id:'visAddress',label:'Home Address',key:'address'},
+    {id:'visBlood',label:'Blood Type',key:'bloodType'},
+    {id:'visOrgan',label:'Organ Donor Status',key:'organDonor'},
+  ];
+  let html='';
+  fields.forEach(f=>{
+    const vis = p[f.id] !== false;
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px;font-weight:600">${f.label}</span>
+      <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleVisibility('${f.id}',this)">${vis?'🔓 Emergency Visible':'🔒 Private Only'}</button>
+    </div>`;
+  });
+  document.getElementById('prof-visibility-list').innerHTML=html;
+}
+
+function saveProfile() {
+  const p = gd('profile',{});
+  p.name = val('prof-name');
+  p.dob = val('prof-dob');
+  p.address = val('prof-address');
+  p.phone = val('prof-phone');
+  p.bloodType = val('prof-blood');
+  p.organDonor = val('prof-organ');
+  p.sex = val('prof-sex');
+  sd('profile',p);
+  document.getElementById('active-profile-name').textContent = p.name || 'My Profile';
+}
+
+function toggleVisibility(field, btn) {
+  const p = gd('profile',{});
+  const current = p[field] !== false;
+  p[field] = !current;
+  sd('profile',p);
+  btn.classList.toggle('visible',!current);
+  btn.classList.toggle('private',current);
+  btn.textContent = (!current) ? '🔓 Emergency Visible' : '🔒 Private Only';
+}
+
+// ── MEDICAL ALERTS ──
+function renderAlerts() {
+  const presets = [
+    {text:'DIABETIC',sev:'critical'},{text:'DO NOT RESUSCITATE (DNR)',sev:'critical'},
+    {text:'PACEMAKER',sev:'important'},{text:'SEVERE PENICILLIN ALLERGY',sev:'critical'},
+    {text:'ALZHEIMER\'S PATIENT',sev:'important'},{text:'EPILEPSY',sev:'important'},
+    {text:'SEVERE NUT ALLERGY — EPI-PEN',sev:'critical'},{text:'ON BLOOD THINNERS',sev:'important'},
+  ];
+  const presetsHtml = presets.map(p=>`<button class="btn btn-sm btn-secondary" onclick="quickAlert('${esc(p.text)}','${p.sev}')">${p.text}</button>`).join('');
+  document.getElementById('alert-presets').innerHTML = presetsHtml;
+
+  const alerts = gd('alerts',[]);
+  if(!alerts.length) {
+    document.getElementById('alerts-list').innerHTML='<div class="empty-state"><span class="empty-icon">⚠️</span><p>No medical alert banners yet. Add conditions first responders must know immediately.</p></div>';
+    return;
+  }
+  let html='';
+  alerts.forEach((a,i)=>{
+    const cls=a.severity==='critical'?'critical':'important';
+    html+=`<div class="list-item" style="border-left:4px solid ${a.severity==='critical'?'var(--emergency)':'var(--warning)'}">
+      <div class="list-item-content">
+        <div class="list-item-title" style="color:${a.severity==='critical'?'var(--emergency)':'var(--warning)'}">${a.severity==='critical'?'🔴':'🟠'} ${esc(a.text)}</div>
+        <div class="list-item-subtitle">Severity: ${esc(a.severity)} · ${a.active===false?'<span style="color:var(--text-muted)">Hidden</span>':'<span style="color:var(--success)">Visible in Emergency View</span>'}</div>
+      </div>
+      <div class="list-item-actions">
+        <button class="btn btn-sm btn-secondary" onclick="toggleAlert('${a.id}')">${a.active===false?'Show':'Hide'}</button>
+        <button class="btn-icon danger owner-only" onclick="deleteAlert('${a.id}')">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('alerts-list');
+  el.innerHTML=html; lockBtns(el);
+}
+
+function addAlert() {
+  const text=val('alert-text').trim(); if(!text) return;
+  const alerts=gd('alerts',[]);
+  alerts.push({id:uid(),text:text.toUpperCase(),severity:val('alert-severity'),active:true});
+  sd('alerts',alerts);
+  document.getElementById('alert-text').value='';
+  renderAlerts();
+}
+function quickAlert(text,sev) {
+  const alerts=gd('alerts',[]);
+  if(alerts.find(a=>a.text===text)) return;
+  alerts.push({id:uid(),text,severity:sev,active:true});
+  sd('alerts',alerts);
+  renderAlerts();
+}
+function toggleAlert(id) {
+  const alerts=gd('alerts',[]); const a=alerts.find(x=>x.id===id);
+  if(a) a.active=a.active===false?true:false;
+  sd('alerts',alerts); renderAlerts();
+}
+function deleteAlert(id) {
+  if(!isOwner()) return;
+  if(!confirm('Delete this alert?')) return;
+  sd('alerts',gd('alerts',[]).filter(a=>a.id!==id)); renderAlerts();
+}
+
+// ── CONDITIONS ──
+function renderConditions() {
+  const items=gd('conditions',[]);
+  if(!items.length) { document.getElementById('conditions-list').innerHTML='<div class="empty-state"><span class="empty-icon">🏥</span><p>No conditions added yet.</p></div>'; return; }
+  let html='';
+  const statusColor={Active:'var(--emergency)',Managed:'var(--warning)',Resolved:'var(--success)'};
+  items.forEach(c=>{
+    const vis=c.emergencyVisible!==false;
+    html+=`<div class="list-item">
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(c.name)}</div>
+        <div class="list-item-subtitle">${c.year?'Since '+esc(c.year)+' · ':''}<span style="color:${statusColor[c.status]||'inherit'}">${esc(c.status)}</span></div>
+      </div>
+      <div class="list-item-actions">
+        <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleCondVis('${c.id}',this)">${vis?'🔓':'🔒'}</button>
+        <button class="btn-icon danger owner-only" onclick="deleteItem('conditions','${c.id}',renderConditions)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('conditions-list'); el.innerHTML=html; lockBtns(el);
+}
+function addCondition() {
+  const name=val('cond-name').trim(); if(!name) return;
+  const items=gd('conditions',[]); items.push({id:uid(),name,year:val('cond-year'),status:val('cond-status'),emergencyVisible:true});
+  sd('conditions',items); clearFields(['cond-name','cond-year']); renderConditions();
+}
+function toggleCondVis(id,btn) {
+  const items=gd('conditions',[]); const c=items.find(x=>x.id===id);
+  if(c) c.emergencyVisible=c.emergencyVisible===false;
+  sd('conditions',items);
+  btn.classList.toggle('visible',c.emergencyVisible!==false);
+  btn.classList.toggle('private',c.emergencyVisible===false);
+  btn.textContent=c.emergencyVisible!==false?'🔓':'🔒';
+}
+
+// ── MEDICATIONS ──
+function renderMedications() {
+  const items=gd('medications',[]);
+  if(!items.length) { document.getElementById('medications-list').innerHTML='<div class="empty-state"><span class="empty-icon">💊</span><p>No medications added yet.</p></div>'; return; }
+  let html='';
+  items.forEach(m=>{
+    const vis=m.emergencyVisible!==false;
+    const locked=!isPremium();
+    html+=`<div class="list-item">
+      <div style="font-size:24px;flex-shrink:0">💊</div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(m.name)} <span style="font-weight:400;color:var(--text-secondary)">${esc(m.dose||'')}</span></div>
+        <div class="list-item-subtitle">${esc(m.route||'')} · ${esc(m.freq||'')}${m.doctor?' · Prescribed by Dr. '+esc(m.doctor):''}</div>
+      </div>
+      <div class="list-item-actions">
+        <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleMedVis('${m.id}',this)">${vis?'🔓':'🔒'}</button>
+        <button class="btn btn-sm ${locked?'btn-locked':''}" onclick="${locked?'showUpgradeToast()':'explainMed(\''+m.id+'\')'}">🤖 ${locked?'🔒 ':''} Explain</button>
+        <button class="btn-icon danger owner-only" onclick="deleteItem('medications','${m.id}',renderMedications)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('medications-list'); el.innerHTML=html; lockBtns(el);
+}
+function addMedication() {
+  const name=val('med-name').trim(); if(!name) return;
+  const items=gd('medications',[]); items.push({id:uid(),name,dose:val('med-dose'),route:val('med-route'),freq:val('med-freq'),doctor:val('med-doctor'),emergencyVisible:true});
+  sd('medications',items); clearFields(['med-name','med-dose','med-freq','med-doctor']); renderMedications();
+}
+function toggleMedVis(id,btn) {
+  const items=gd('medications',[]); const m=items.find(x=>x.id===id);
+  if(m) m.emergencyVisible=m.emergencyVisible===false;
+  sd('medications',items);
+  btn.classList.toggle('visible',m.emergencyVisible!==false);
+  btn.classList.toggle('private',m.emergencyVisible===false);
+  btn.textContent=m.emergencyVisible!==false?'🔓':'🔒';
+}
+async function checkInteractions() {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const meds=gd('medications',[]); if(!meds.length) { showInfo('interaction-result','No medications to check.'); return; }
+  const conds=gd('conditions',[]);
+  showInfo('interaction-result','<div style="display:flex;align-items:center;gap:8px">⏳ Checking interactions — this may take up to 60 seconds...</div>');
+  try {
+    const r=await fetch(`${BACKEND}/api/check-interactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({medications:meds,conditions:conds})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('interaction-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 AI Drug Interaction Check</strong><div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap">${esc(d.result)}</div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div></div>`);
+  } catch(e) {
+    showInfo('interaction-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
+  }
+}
+async function explainMed(id) {
+  const meds=gd('medications',[]); const m=meds.find(x=>x.id===id); if(!m) return;
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const conds=gd('conditions',[]);
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:16px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 60 seconds...</div></div>`;
+  document.body.appendChild(modal);
+  try {
+    const r=await fetch(`${BACKEND}/api/explain-medication`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,dosage:m.dose||'',route:m.route||'',conditions:conds})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    modal.querySelector('#explain-content').innerHTML=`<div style="font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.explanation)}</div><div style="margin-top:12px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div>`;
+  } catch(e) {
+    modal.querySelector('#explain-content').innerHTML=`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI.')}</div>`;
+  }
+}
+
+// ── ALLERGIES ──
+function renderAllergies() {
+  const items=gd('allergies',[]);
+  if(!items.length) { document.getElementById('allergies-list').innerHTML='<div class="empty-state"><span class="empty-icon">🚫</span><p>No allergies added.</p></div>'; return; }
+  const sevColor={Mild:'var(--success)',Moderate:'var(--warning)',Severe:'var(--emergency)',Anaphylaxis:'var(--emergency)'};
+  let html='';
+  items.forEach(a=>{
+    const vis=a.emergencyVisible!==false;
+    html+=`<div class="list-item" style="border-left:3px solid ${sevColor[a.severity]||'var(--border)'}">
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(a.name)} <span class="badge badge-${a.severity==='Anaphylaxis'||a.severity==='Severe'?'red':a.severity==='Moderate'?'orange':'green'}">${esc(a.severity)}</span></div>
+        <div class="list-item-subtitle">${esc(a.type)}${a.reaction?' · Reaction: '+esc(a.reaction):''}</div>
+      </div>
+      <div class="list-item-actions">
+        <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleAllergyVis('${a.id}',this)">${vis?'🔓':'🔒'}</button>
+        <button class="btn-icon danger owner-only" onclick="deleteItem('allergies','${a.id}',renderAllergies)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('allergies-list'); el.innerHTML=html; lockBtns(el);
+}
+function addAllergy() {
+  const name=val('allergy-name').trim(); if(!name) return;
+  const items=gd('allergies',[]); items.push({id:uid(),name,type:val('allergy-type'),severity:val('allergy-severity'),reaction:val('allergy-reaction'),emergencyVisible:true});
+  sd('allergies',items); clearFields(['allergy-name','allergy-reaction']); renderAllergies();
+}
+function toggleAllergyVis(id,btn) {
+  const items=gd('allergies',[]); const a=items.find(x=>x.id===id);
+  if(a) a.emergencyVisible=a.emergencyVisible===false;
+  sd('allergies',items);
+  btn.classList.toggle('visible',a.emergencyVisible!==false);
+  btn.classList.toggle('private',a.emergencyVisible===false);
+  btn.textContent=a.emergencyVisible!==false?'🔓':'🔒';
+}
+
+// ── LAB RESULTS ──
+function renderLabResults() {
+  const items=gd('lab_results',[]);
+  if(!items.length) { document.getElementById('lab-list').innerHTML='<div class="empty-state"><span class="empty-icon">🔬</span><p>No lab results added yet.</p></div>'; return; }
+  let html='';
+  items.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(r=>{
+    html+=`<div class="list-item">
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(r.name)}</div>
+        <div class="list-item-subtitle">${fmt(r.date)}${r.doctor?' · '+esc(r.doctor):''}</div>
+        ${r.notes?`<div style="font-size:13px;color:var(--text-secondary);margin-top:6px;font-family:monospace;background:var(--bg-primary);padding:8px;border-radius:4px;white-space:pre-wrap">${esc(r.notes)}</div>`:''}
+      </div>
+      <div class="list-item-actions">
+        <button class="btn-icon danger owner-only" onclick="deleteItem('lab_results','${r.id}',renderLabResults)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('lab-list'); el.innerHTML=html; lockBtns(el);
+}
+function addLabResult() {
+  const name=val('lab-name').trim(); if(!name) return;
+  const items=gd('lab_results',[]); items.push({id:uid(),name,date:val('lab-date')||new Date().toISOString().slice(0,10),doctor:val('lab-doctor'),notes:val('lab-notes')});
+  sd('lab_results',items); clearFields(['lab-name','lab-doctor','lab-notes']); renderLabResults();
+}
+async function analyzeLab() {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const notes=val('lab-notes').trim(); if(!notes) { alert('Enter lab values in the notes field first.'); return; }
+  const testName=val('lab-name')||'Lab Result';
+  const conds=gd('conditions',[]); const meds=gd('medications',[]);
+  showInfo('lab-ai-result','⏳ Analyzing your lab results — this may take up to 60 seconds...');
+  try {
+    const r=await fetch(`${BACKEND}/api/analyze-labs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:notes,testName,conditions:conds,medications:meds})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('lab-ai-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 AI Lab Analysis</strong><div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.analysis)}</div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div></div>`);
+  } catch(e) {
+    showInfo('lab-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
+  }
+}
+
+// ── VITALS & CHARTS ──
+function setVitalsDatetime() {
+  const el=document.getElementById('vital-datetime');
+  if(el && !el.value) { const now=new Date(); el.value=now.toISOString().slice(0,16); }
+}
+function addVital() {
+  const entry = {
+    id:uid(),
+    datetime:val('vital-datetime')||new Date().toISOString().slice(0,16),
+    sys:numVal('vital-sys'), dia:numVal('vital-dia'), hr:numVal('vital-hr'),
+    glucose:numVal('vital-glucose'), weight:numVal('vital-weight'),
+    o2:numVal('vital-o2'), temp:numVal('vital-temp')
+  };
+  const hasData = Object.entries(entry).some(([k,v])=>k!=='id'&&k!=='datetime'&&v!==null);
+  if(!hasData) { alert('Enter at least one vital value.'); return; }
+  const items=gd('vitals',[]); items.push(entry); sd('vitals',items);
+  clearFields(['vital-sys','vital-dia','vital-hr','vital-glucose','vital-weight','vital-o2','vital-temp']);
+  setVitalsDatetime();
+  renderVitals();
+}
+function setVitalsRange(range,btn) {
+  vitalsRange=range;
+  document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderVitalsCharts();
+}
+function renderVitals() { renderVitalsLog(); renderVitalsCharts(); }
+function filterVitals(all) {
+  if(vitalsRange==='all') return all;
+  const ms={...{}}; ms['7d']=7;ms['30d']=30;ms['3m']=90;ms['1y']=365;
+  const days=ms[vitalsRange]||7; const cutoff=Date.now()-(days*86400000);
+  return all.filter(v=>new Date(v.datetime).getTime()>=cutoff);
+}
+function renderVitalsLog() {
+  const items=gd('vitals',[]); const el=document.getElementById('vitals-log-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state" style="padding:24px"><p>No vitals logged yet.</p></div>'; return; }
+  let html='';
+  [...items].reverse().slice(0,10).forEach(v=>{
+    const parts=[];
+    if(v.sys&&v.dia) parts.push(`🩸 ${v.sys}/${v.dia}`);
+    if(v.hr) parts.push(`❤️ ${v.hr} bpm`);
+    if(v.glucose) parts.push(`🍬 ${v.glucose} mg/dL`);
+    if(v.o2) parts.push(`💨 ${v.o2}%`);
+    if(v.temp) parts.push(`🌡️ ${v.temp}°F`);
+    if(v.weight) parts.push(`⚖️ ${v.weight} lbs`);
+    html+=`<div class="list-item"><div class="list-item-content"><div class="list-item-subtitle">${fmt(v.datetime)}</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">${parts.map(p=>`<span class="tag">${p}</span>`).join('')}</div></div>
+    <button class="btn-icon danger owner-only" onclick="deleteItem('vitals','${v.id}',renderVitals)">🗑️</button></div>`;
+  });
+  el.innerHTML=html; lockBtns(el);
+}
+
+function renderVitalsCharts() {
+  const all=gd('vitals',[]); const filtered=filterVitals(all);
+  const dates=filtered.map(v=>{ try{return new Date(v.datetime).toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch(e){return v.datetime.slice(0,10);} });
+
+  function makeChart(canvasId,label,data,color,normalLow,normalHigh,unit,latestId) {
+    const ctx=document.getElementById(canvasId); if(!ctx) return;
+    if(chartInstances[canvasId]) { try{chartInstances[canvasId].destroy();}catch(e){} }
+    const validData=data.map(v=>v===null||v===undefined?null:v);
+    const latestVal=validData.filter(v=>v!==null).slice(-1)[0];
+    if(latestId) { const el=document.getElementById(latestId); if(el && latestVal!=null) el.textContent=`Latest: ${latestVal} ${unit}`; }
+    const bandColor='rgba(46,160,67,0.1)', bandBorder='rgba(46,160,67,0.35)';
+    const datasets=[];
+    if(normalHigh!=null && normalLow!=null) {
+      datasets.push({label:'Normal High',data:dates.map(()=>normalHigh),borderColor:bandBorder,backgroundColor:bandColor,fill:'+1',pointRadius:0,borderWidth:1,borderDash:[4,4],tension:0});
+      datasets.push({label:'Normal Low',data:dates.map(()=>normalLow),borderColor:bandBorder,backgroundColor:'transparent',fill:false,pointRadius:0,borderWidth:1,borderDash:[4,4],tension:0});
+    }
+    datasets.push({label,data:validData,borderColor:color,backgroundColor:color.replace('rgb','rgba').replace(')',',0.15)'),fill:false,pointRadius:4,pointHoverRadius:7,tension:0.3,borderWidth:2,spanGaps:true});
+    chartInstances[canvasId]=new Chart(ctx,{type:'line',data:{labels:dates,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y} ${unit}`}}},scales:{x:{ticks:{color:'#656d76',font:{size:11}},grid:{color:'#21262d'}},y:{ticks:{color:'#656d76',font:{size:11}},grid:{color:'#21262d'}}}}});
+  }
+
+  // BP is special — two series
+  const bpCtx=document.getElementById('chart-bp'); if(bpCtx) {
+    if(chartInstances['chart-bp']) { try{chartInstances['chart-bp'].destroy();}catch(e){} }
+    const sysData=filtered.map(v=>v.sys?+v.sys:null);
+    const diaData=filtered.map(v=>v.dia?+v.dia:null);
+    const latestSys=sysData.filter(v=>v!==null).slice(-1)[0];
+    const latestDia=diaData.filter(v=>v!==null).slice(-1)[0];
+    if(latestSys!=null) document.getElementById('chart-bp-latest').textContent=`Latest: ${latestSys}/${latestDia||'?'} mmHg`;
+    chartInstances['chart-bp']=new Chart(bpCtx,{type:'line',data:{labels:dates,datasets:[
+      {label:'Normal Sys High',data:dates.map(()=>120),borderColor:'rgba(46,160,67,0.3)',backgroundColor:'rgba(46,160,67,0.08)',fill:'+1',pointRadius:0,borderWidth:1,borderDash:[4,4],tension:0},
+      {label:'Normal Sys Low',data:dates.map(()=>90),borderColor:'rgba(46,160,67,0.3)',backgroundColor:'transparent',fill:false,pointRadius:0,borderWidth:1,borderDash:[4,4],tension:0},
+      {label:'Systolic',data:sysData,borderColor:'#E63946',backgroundColor:'rgba(230,57,70,0.1)',fill:false,pointRadius:4,tension:0.3,spanGaps:true,borderWidth:2},
+      {label:'Diastolic',data:diaData,borderColor:'#00B4D8',backgroundColor:'rgba(0,180,216,0.1)',fill:false,pointRadius:4,tension:0.3,spanGaps:true,borderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#8b949e',font:{size:11},filter:i=>!i.text.startsWith('Normal')}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e'}},scales:{x:{ticks:{color:'#656d76',font:{size:11}},grid:{color:'#21262d'}},y:{ticks:{color:'#656d76',font:{size:11}},grid:{color:'#21262d'}}}}});
+  }
+
+  makeChart('chart-hr','Heart Rate',filtered.map(v=>v.hr?+v.hr:null),'#ff6b6b',60,100,'bpm','chart-hr-latest');
+  makeChart('chart-glucose','Blood Sugar',filtered.map(v=>v.glucose?+v.glucose:null),'#ffd93d',70,140,'mg/dL','chart-glucose-latest');
+  makeChart('chart-weight','Weight',filtered.map(v=>v.weight?+v.weight:null),'#00B4D8',null,null,'lbs','chart-weight-latest');
+  makeChart('chart-o2','Oxygen',filtered.map(v=>v.o2?+v.o2:null),'#4ecdc4',95,100,'%','chart-o2-latest');
+  makeChart('chart-temp','Temp',filtered.map(v=>v.temp?+v.temp:null),'#a29bfe',97,99,'°F','chart-temp-latest');
+}
+
+// ── DOCUMENTS ──
+function renderDocuments() {
+  const items=gd('documents',[]);
+  if(!items.length) { document.getElementById('documents-list').innerHTML='<div class="empty-state"><span class="empty-icon">📄</span><p>No documents uploaded yet.</p></div>'; return; }
+  const byCategory={};
+  items.forEach(d=>{ if(!byCategory[d.category]) byCategory[d.category]=[]; byCategory[d.category].push(d); });
+  let html='';
+  Object.entries(byCategory).forEach(([cat,docs])=>{
+    html+=`<div class="card"><div class="card-title">${esc(cat)}</div>`;
+    docs.forEach(d=>{
+      html+=`<div class="list-item"><div class="list-item-content"><div class="list-item-title">${esc(d.name)}</div><div class="list-item-subtitle">${fmt(d.date)}${d.notes?' · '+esc(d.notes):''}</div></div>
+      <div class="list-item-actions"><button class="btn-icon danger owner-only" onclick="deleteItem('documents','${d.id}',renderDocuments)">🗑️</button></div></div>`;
+    });
+    html+='</div>';
+  });
+  const el=document.getElementById('documents-list'); el.innerHTML=html; lockBtns(el);
+}
+function addDocument() {
+  const name=val('doc-name').trim(); if(!name) return;
+  const items=gd('documents',[]); items.push({id:uid(),name,category:val('doc-category'),date:val('doc-date')||new Date().toISOString().slice(0,10),notes:val('doc-notes')});
+  sd('documents',items); clearFields(['doc-name','doc-notes']); renderDocuments();
+}
+async function analyzeDocument() {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const docName=val('doc-name')||'Medical Document';
+  const docNotes=val('doc-notes').trim();
+  if(!docNotes) { alert('Enter document text or paste the document contents in the Notes field first.'); return; }
+  showInfo('doc-ai-result','⏳ Analyzing document — this may take up to 60 seconds...');
+  try {
+    const r=await fetch(`${BACKEND}/api/analyze-document`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:docNotes,name:docName})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('doc-ai-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 AI Document Analysis</strong><div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div></div>`);
+  } catch(e) {
+    showInfo('doc-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
+  }
+}
+
+// ── HEALTH APPS ──
+function renderHealthApps() {
+  const items = gd('health_apps', []);
+  const el = document.getElementById('healthapps-list');
+  if(!el) return;
+  if(!items.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px"><span class="empty-icon">🔗</span><p>No apps added yet. Add your patient portals below.</p></div>';
+    return;
+  }
+  let html = '';
+  items.forEach(a => {
+    const icon = a.icon || '🏥';
+    const url = a.url && !a.url.startsWith('http') ? 'https://' + a.url : (a.url || '#');
+    html += `<div class="list-item" style="margin-bottom:10px">
+      <div style="width:42px;height:42px;border-radius:10px;background:var(--bg-secondary);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${esc(icon)}</div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(a.name)}</div>
+        <div class="list-item-subtitle">${a.notes ? esc(a.notes) + ' · ' : ''}<span style="color:var(--text-muted);font-size:11px">${esc(a.url||'')}</span></div>
+      </div>
+      <div class="list-item-actions" style="gap:8px">
+        <a href="${esc(url)}" target="_blank" class="btn btn-primary" style="text-decoration:none;padding:7px 14px;font-size:13px">Open →</a>
+        <button class="btn-icon danger owner-only" onclick="deleteItem('health_apps','${a.id}',renderHealthApps)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+  lockBtns(el);
+}
+function addHealthApp() {
+  const name = val('ha-name').trim();
+  if(!name) { alert('Please enter an app name.'); return; }
+  const items = gd('health_apps', []);
+  items.push({ id: uid(), name, icon: val('ha-icon').trim() || '🏥', url: val('ha-url').trim(), notes: val('ha-notes').trim() });
+  sd('health_apps', items);
+  clearFields(['ha-name','ha-icon','ha-url','ha-notes']);
+  renderHealthApps();
+}
+
+// ── HEALTH APPS IMPORT ──
+function handleImportDrop(e) {
+  e.preventDefault();
+  document.getElementById('import-drop-zone').style.borderColor='var(--border)';
+  const file = e.dataTransfer.files[0];
+  if(file) processImportFile(file);
+}
+function handleImportFile(input) {
+  const file = input.files[0];
+  if(file) processImportFile(file);
+  input.value='';
+}
+async function processImportFile(file) {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const maxMB = 5;
+  if(file.size > maxMB * 1024 * 1024) { alert(`File too large. Please keep imports under ${maxMB}MB.`); return; }
+  showInfo('import-ai-result','<div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--accent-dim);border-radius:8px">⏳ Reading your file and running AI analysis — this may take up to 60 seconds...</div>');
+  try {
+    let text = '';
+    if(file.name.toLowerCase().endsWith('.xml') || file.name.toLowerCase().endsWith('.ccda')) {
+      // CCDA/XML: strip tags and extract readable text
+      const raw = await file.text();
+      text = raw.replace(/<[^>]+>/g,' ').replace(/\s{2,}/g,' ').trim().slice(0,8000);
+    } else if(file.name.toLowerCase().endsWith('.pdf')) {
+      text = `[PDF file: ${file.name}]\n\nNote: PDF text extraction is limited in browser — paste the key content from the document in the Notes field for best AI results.`;
+      showInfo('import-ai-result',`<div class="card" style="margin:0;background:var(--bg-secondary)"><strong>📄 PDF Detected</strong><p style="margin-top:8px;font-size:13px;color:var(--text-secondary)">For best results with PDF health records, open the PDF, select all the text, copy it, and paste it into a new Document entry in your <strong>Documents</strong> section — then use the AI Analyze button there. Full PDF scanning is coming in a future update.</p></div>`);
+      return;
+    } else {
+      text = (await file.text()).slice(0, 8000);
+    }
+    if(!text.trim()) { showInfo('import-ai-result','<div style="color:var(--warning)">⚠️ Could not read text from this file. Try copy-pasting the content into the Documents section instead.</div>'); return; }
+    const r = await fetch(`${BACKEND}/api/analyze-document`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text, name: file.name})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('import-ai-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)">
+      <strong style="color:var(--accent)">🤖 AI Import Analysis — ${esc(file.name)}</strong>
+      <div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div>
+      <div style="margin-top:12px">
+        <button class="btn btn-secondary" style="font-size:12px" onclick="saveImportAsDocument('${esc(file.name)}', this)">💾 Save to My Documents</button>
+      </div>
+    </div>`);
+  } catch(e) {
+    showInfo('import-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to process file. Please try again.')}</div>`);
+  }
+}
+function saveImportAsDocument(name, btn) {
+  const items = gd('documents',[]);
+  items.push({id:uid(), name, date:new Date().toISOString().slice(0,10), category:'Imported', notes:'Imported via My Health Apps. See AI analysis above.', emergencyVisible:false});
+  sd('documents', items);
+  btn.textContent = '✅ Saved to Documents';
+  btn.disabled = true;
+}
+
+// ── APPOINTMENTS ──
+function renderAppointments() {
+  const items=gd('appointments',[]); const today=new Date(); today.setHours(0,0,0,0);
+  const upcoming=items.filter(a=>new Date(a.date)>=today).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const past=items.filter(a=>new Date(a.date)<today).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  renderApptList('appt-upcoming',upcoming,'No upcoming appointments.');
+  renderApptList('appt-past',past,'No past appointments on record.');
+}
+function renderApptList(containerId,items,emptyMsg) {
+  const el=document.getElementById(containerId);
+  if(!items.length) { el.innerHTML=`<div class="empty-state" style="padding:30px"><p>${emptyMsg}</p></div>`; return; }
+  let html='';
+  items.forEach(a=>{
+    html+=`<div class="list-item">
+      <div style="flex-shrink:0;text-align:center;min-width:50px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">${a.date?new Date(a.date).toLocaleDateString('en-US',{month:'short'}):'—'}</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${a.date?new Date(a.date).getDate():'—'}</div></div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(a.doctor)}</div>
+        <div class="list-item-subtitle">${a.time?esc(a.time)+' · ':''}<span style="color:var(--text-secondary)">${esc(a.specialty||'')}</span>${a.location?' · '+esc(a.location):''}</div>
+        ${a.reason?`<div style="font-size:13px;color:var(--text-muted);margin-top:3px">Reason: ${esc(a.reason)}</div>`:''}
+        ${a.notes?`<div style="font-size:13px;color:var(--text-muted);margin-top:2px">📝 ${esc(a.notes)}</div>`:''}
+      </div>
+      <div class="list-item-actions">
+        <button class="btn-icon danger owner-only" onclick="deleteItem('appointments','${a.id}',renderAppointments)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML=html; lockBtns(document.getElementById(containerId));
+}
+function addAppointment() {
+  const doctor=val('appt-doctor').trim(); if(!doctor) return;
+  const items=gd('appointments',[]); items.push({id:uid(),doctor,specialty:val('appt-specialty'),date:val('appt-date'),time:val('appt-time'),location:val('appt-location'),reason:val('appt-reason'),notes:val('appt-notes')});
+  sd('appointments',items); clearFields(['appt-doctor','appt-specialty','appt-date','appt-time','appt-location','appt-reason','appt-notes']); renderAppointments(); populateApptSelect();
+}
+function switchApptTab(tab,btn) {
+  document.getElementById('appt-upcoming').style.display=tab==='upcoming'?'block':'none';
+  document.getElementById('appt-past').style.display=tab==='past'?'block':'none';
+  document.querySelectorAll('#section-appointments .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+function populateApptSelect() {
+  const items=gd('appointments',[]); const today=new Date(); today.setHours(0,0,0,0);
+  const upcoming=items.filter(a=>new Date(a.date)>=today).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const select=document.getElementById('q-appt'); if(!select) return;
+  select.innerHTML='<option value="">General / Any visit</option>';
+  upcoming.forEach(a=>{ select.innerHTML+=`<option value="${a.id}">${esc(a.doctor)} — ${fmt(a.date)}</option>`; });
+}
+
+// ── DOCTOR QUESTIONS ──
+function renderQuestions() {
+  const items=gd('questions',[]);
+  if(!items.length) { document.getElementById('questions-list').innerHTML='<div class="empty-state"><span class="empty-icon">❓</span><p>No questions yet. Jot down things to ask at your next appointment.</p></div>'; return; }
+  let html='';
+  items.forEach(q=>{
+    html+=`<div class="list-item" ${q.asked?'style="opacity:0.6"':''}>
+      <div style="font-size:20px;cursor:pointer" onclick="toggleQuestionAsked('${q.id}')">${q.asked?'✅':'⬜'}</div>
+      <div class="list-item-content">
+        <div class="list-item-title" ${q.asked?'style="text-decoration:line-through"':''}>${esc(q.text)}</div>
+        ${q.apptId?`<div class="list-item-subtitle">📅 Linked to appointment</div>`:''}
+      </div>
+      <div class="list-item-actions">
+        <button class="btn-icon danger owner-only" onclick="deleteItem('questions','${q.id}',renderQuestions)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('questions-list'); el.innerHTML=html; lockBtns(el);
+}
+function addQuestion() {
+  const text=val('q-text').trim(); if(!text) return;
+  const items=gd('questions',[]); items.push({id:uid(),text,apptId:val('q-appt'),asked:false});
+  sd('questions',items); clearFields(['q-text']); renderQuestions();
+}
+function toggleQuestionAsked(id) {
+  const items=gd('questions',[]); const q=items.find(x=>x.id===id);
+  if(q) q.asked=!q.asked; sd('questions',items); renderQuestions();
+}
+async function suggestQuestions() {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const conds=gd('conditions',[]); const meds=gd('medications',[]);
+  const apptId=val('q-appt'); const appts=gd('appointments',[]);
+  const appt=appts.find(a=>a.id===apptId)||{};
+  const labs=gd('lab_results',[]).slice(-5);
+  showInfo('q-ai-result','⏳ Generating personalized questions — up to 60 seconds...');
+  try {
+    const r=await fetch(`${BACKEND}/api/suggest-questions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conditions:conds,medications:meds,appointment:appt,recentLabs:labs})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('q-ai-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 AI-Suggested Questions</strong><div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.questions)}</div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div></div>`);
+  } catch(e) {
+    showInfo('q-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
+  }
+}
+
+// ── CARE TEAM ──
+function renderCareTeam() {
+  const items=gd('care_team',[]);
+  if(!items.length) { document.getElementById('care-team-list').innerHTML='<div class="empty-state"><span class="empty-icon">👩‍⚕️</span><p>No providers added yet.</p></div>'; return; }
+  const roleIcons={Primary:'🩺','Cardio':'❤️','Neuro':'🧠','Pharm':'💊'};
+  let html='';
+  items.forEach(c=>{
+    html+=`<div class="list-item">
+      <div style="font-size:28px;flex-shrink:0">👩‍⚕️</div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(c.name)} <span class="badge badge-teal">${esc(c.role)}</span></div>
+        <div class="list-item-subtitle">${c.phone?`<a href="tel:${esc(c.phone)}" style="color:var(--accent);text-decoration:none">📞 ${esc(c.phone)}</a> · `:''} ${c.address?esc(c.address):''}${c.notes?'<br>'+esc(c.notes):''}</div>
+      </div>
+      <div class="list-item-actions">
+        <button class="btn-icon danger owner-only" onclick="deleteItem('care_team','${c.id}',renderCareTeam)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('care-team-list'); el.innerHTML=html; lockBtns(el);
+}
+function addCareTeam() {
+  const name=val('ct-name').trim(); if(!name) return;
+  const items=gd('care_team',[]); items.push({id:uid(),name,role:val('ct-role'),phone:val('ct-phone'),address:val('ct-address'),notes:val('ct-notes')});
+  sd('care_team',items); clearFields(['ct-name','ct-phone','ct-address','ct-notes']); renderCareTeam();
+}
+
+// ── EMERGENCY CONTACTS ──
+function renderEmergencyContacts() {
+  const items=gd('emergency_contacts',[]);
+  if(!items.length) { document.getElementById('emergency-contacts-list').innerHTML='<div class="empty-state"><span class="empty-icon">📞</span><p>No emergency contacts added yet.</p></div>'; return; }
+  let html='';
+  items.forEach((c,i)=>{
+    html+=`<div class="list-item">
+      <div style="font-size:14px;font-weight:800;color:var(--accent);min-width:24px;text-align:center">#${i+1}</div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(c.name)} <span class="badge badge-gray">${esc(c.relationship)}</span></div>
+        <div class="list-item-subtitle"><a href="tel:${esc(c.phone)}" style="color:var(--success);font-weight:700;font-size:16px;text-decoration:none">📞 ${esc(c.phone)}</a></div>
+      </div>
+      <div class="list-item-actions">
+        ${i>0?`<button class="btn-icon owner-only" onclick="moveContact(${i},-1)">▲</button>`:''}
+        ${i<items.length-1?`<button class="btn-icon owner-only" onclick="moveContact(${i},1)">▼</button>`:''}
+        <button class="btn-icon danger owner-only" onclick="deleteItem('emergency_contacts','${c.id}',renderEmergencyContacts)">🗑️</button>
+      </div>
+    </div>`;
+  });
+  const el=document.getElementById('emergency-contacts-list'); el.innerHTML=html; lockBtns(el);
+}
+function addEmergencyContact() {
+  const name=val('ec-name').trim(); if(!name) return;
+  const items=gd('emergency_contacts',[]); items.push({id:uid(),name,relationship:val('ec-rel'),phone:val('ec-phone')});
+  sd('emergency_contacts',items); clearFields(['ec-name','ec-rel','ec-phone']); renderEmergencyContacts();
+}
+function moveContact(idx,dir) {
+  if(!isOwner()) return;
+  const items=gd('emergency_contacts',[]); const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=items.length) return;
+  [items[idx],items[newIdx]]=[items[newIdx],items[idx]];
+  sd('emergency_contacts',items); renderEmergencyContacts();
+}
+
+// ── BILLING ──
+function loadInsuranceForm() {
+  const ins=gd('insurance',{});
+  setValue('ins-provider',ins.provider); setValue('ins-policy',ins.policy); setValue('ins-group',ins.group);
+  setValue('ins-member-phone',ins.memberPhone); setValue('ins-claims-phone',ins.claimsPhone); setValue('ins-effective',ins.effective);
+}
+function saveInsurance() {
+  sd('insurance',{provider:val('ins-provider'),policy:val('ins-policy'),group:val('ins-group'),memberPhone:val('ins-member-phone'),claimsPhone:val('ins-claims-phone'),effective:val('ins-effective')});
+}
+function addBill() {
+  const desc=val('bill-desc').trim(); if(!desc) return;
+  const items=gd('bills',[]); items.push({id:uid(),desc,provider:val('bill-provider'),date:val('bill-date'),amount:parseFloat(val('bill-amount'))||0,status:val('bill-status')});
+  sd('bills',items); clearFields(['bill-desc','bill-provider','bill-date','bill-amount']); renderBills();
+}
+function renderBills() {
+  const items=gd('bills',[]);
+  const outstanding=items.filter(b=>b.status==='Outstanding').reduce((s,b)=>s+b.amount,0);
+  const paid=items.filter(b=>b.status==='Paid').reduce((s,b)=>s+b.amount,0);
+  document.getElementById('billing-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Outstanding</div><div class="stat-value red">$${outstanding.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Paid</div><div class="stat-value green">$${paid.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Bills</div><div class="stat-value teal">${items.length}</div></div>`;
+  document.getElementById('bills-empty').style.display=items.length?'none':'block';
+  document.getElementById('bills-table').style.display=items.length?'table':'none';
+  const tbody=document.getElementById('bills-tbody');
+  const statusBadge={Outstanding:'badge-red',Paid:'badge-green','In Dispute':'badge-orange'};
+  tbody.innerHTML=items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(b=>`<tr><td>${esc(b.desc)}</td><td>${esc(b.provider)}</td><td>${fmt(b.date)}</td><td>$${(+b.amount||0).toFixed(2)}</td><td><span class="badge ${statusBadge[b.status]||'badge-gray'}">${esc(b.status)}</span></td><td><button class="btn-icon danger owner-only" onclick="deleteItem('bills','${b.id}',renderBills)">🗑️</button></td></tr>`).join('');
+  lockBtns(document.getElementById('billing-stats'));
+  lockBtns(tbody);
+}
+
+// ── MEDICAL HISTORY ──
+function renderHistory() { renderSurgeries(); renderHospitalizations(); renderMedEvents(); renderHistoryTimeline(); }
+function switchHistTab(tab,btn) {
+  ['surgeries','hospitalizations','events','timeline'].forEach(t=>{ document.getElementById('hist-'+t).style.display=t===tab?'block':'none'; });
+  document.querySelectorAll('#section-history .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+function addSurgery() {
+  const name=val('surg-name').trim(); if(!name) return;
+  const items=gd('surgeries',[]); items.push({id:uid(),name,date:val('surg-date'),hospital:val('surg-hospital'),notes:val('surg-notes')});
+  sd('surgeries',items); clearFields(['surg-name','surg-hospital','surg-notes']); renderSurgeries(); renderHistoryTimeline();
+}
+function renderSurgeries() {
+  const items=gd('surgeries',[]); const el=document.getElementById('surgeries-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state" style="padding:30px"><span class="empty-icon" style="font-size:36px">🏥</span><p>No surgeries on record.</p></div>'; return; }
+  el.innerHTML=items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(s=>`<div class="list-item"><div class="list-item-content"><div class="list-item-title">${esc(s.name)}</div><div class="list-item-subtitle">${fmt(s.date)}${s.hospital?' · '+esc(s.hospital):''}${s.notes?'<br>'+esc(s.notes):''}</div></div><button class="btn-icon danger owner-only" onclick="deleteItem('surgeries','${s.id}',()=>{renderSurgeries();renderHistoryTimeline()})">🗑️</button></div>`).join('');
+  lockBtns(el);
+}
+function addHospitalization() {
+  const reason=val('hosp-reason').trim(); if(!reason) return;
+  const items=gd('hospitalizations',[]); items.push({id:uid(),reason,date:val('hosp-date'),hospital:val('hosp-hospital'),days:val('hosp-days'),notes:val('hosp-notes')});
+  sd('hospitalizations',items); clearFields(['hosp-reason','hosp-hospital','hosp-days','hosp-notes']); renderHospitalizations(); renderHistoryTimeline();
+}
+function renderHospitalizations() {
+  const items=gd('hospitalizations',[]); const el=document.getElementById('hospitalizations-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state" style="padding:30px"><p>No hospitalizations on record.</p></div>'; return; }
+  el.innerHTML=items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(h=>`<div class="list-item"><div class="list-item-content"><div class="list-item-title">${esc(h.reason)}</div><div class="list-item-subtitle">${fmt(h.date)}${h.hospital?' · '+esc(h.hospital):''}${h.days?' · '+esc(h.days)+' days':''}${h.notes?'<br>'+esc(h.notes):''}</div></div><button class="btn-icon danger owner-only" onclick="deleteItem('hospitalizations','${h.id}',()=>{renderHospitalizations();renderHistoryTimeline()})">🗑️</button></div>`).join('');
+  lockBtns(el);
+}
+function addMedEvent() {
+  const items=gd('med_events',[]); items.push({id:uid(),type:val('event-type'),date:val('event-date'),notes:val('event-notes')});
+  sd('med_events',items); clearFields(['event-notes']); renderMedEvents(); renderHistoryTimeline();
+}
+function renderMedEvents() {
+  const items=gd('med_events',[]); const el=document.getElementById('events-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state" style="padding:30px"><p>No major events on record.</p></div>'; return; }
+  el.innerHTML=items.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(e=>`<div class="list-item"><div class="list-item-content"><div class="list-item-title">${esc(e.type)}</div><div class="list-item-subtitle">${fmt(e.date)}${e.notes?'<br>'+esc(e.notes):''}</div></div><button class="btn-icon danger owner-only" onclick="deleteItem('med_events','${e.id}',()=>{renderMedEvents();renderHistoryTimeline()})">🗑️</button></div>`).join('');
+  lockBtns(el);
+}
+function renderHistoryTimeline() {
+  const surgeries=gd('surgeries',[]).map(s=>({date:s.date,title:s.name,body:`Surgery at ${s.hospital||'unknown hospital'}`,icon:'🔪'}));
+  const hosps=gd('hospitalizations',[]).map(h=>({date:h.date,title:h.reason,body:`${h.hospital||''} ${h.days?h.days+' days':''}`,icon:'🏥'}));
+  const events=gd('med_events',[]).map(e=>({date:e.date,title:e.type,body:e.notes||'',icon:'⭐'}));
+  const all=[...surgeries,...hosps,...events].filter(x=>x.date).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const el=document.getElementById('history-timeline');
+  if(!all.length) { el.innerHTML='<div class="empty-state" style="padding:30px"><p>Add surgeries, hospitalizations, and events to see your timeline.</p></div>'; return; }
+  el.innerHTML=all.map(e=>`<div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-date">${fmt(e.date)}</div><div class="timeline-title">${e.icon} ${esc(e.title)}</div>${e.body?`<div class="timeline-body">${esc(e.body)}</div>`:''}</div>`).join('');
+}
+
+// ── VACCINATIONS ──
+function renderVaccinations() {
+  const items=gd('vaccinations',[]);
+  if(!items.length) { document.getElementById('vaccinations-list').innerHTML='<div class="empty-state"><span class="empty-icon">💉</span><p>No vaccinations recorded yet.</p></div>'; return; }
+  let html='';
+  items.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(v=>{
+    const boosterSoon=v.booster&&(new Date(v.booster)-Date.now())<(90*86400000);
+    html+=`<div class="list-item"><div class="list-item-content"><div class="list-item-title">💉 ${esc(v.name)}</div><div class="list-item-subtitle">Received: ${fmt(v.date)}${v.location?' · '+esc(v.location):''}${v.booster?'<br>Booster due: <span style="color:'+( boosterSoon?'var(--emergency)':'var(--text-secondary)')+'">'+fmt(v.booster)+'</span>':''}</div></div>
+    <button class="btn-icon danger owner-only" onclick="deleteItem('vaccinations','${v.id}',renderVaccinations)">🗑️</button></div>`;
+  });
+  const el=document.getElementById('vaccinations-list'); el.innerHTML=html; lockBtns(el);
+}
+function addVaccination() {
+  const name=val('vax-name').trim(); if(!name) return;
+  const items=gd('vaccinations',[]); items.push({id:uid(),name,date:val('vax-date'),booster:val('vax-booster'),location:val('vax-location')});
+  sd('vaccinations',items); clearFields(['vax-name','vax-date','vax-booster','vax-location']); renderVaccinations();
+}
+
+// ── VISION & DENTAL ──
+function switchVDTab(tab,btn) {
+  document.getElementById('vd-vision').style.display=tab==='vision'?'block':'none';
+  document.getElementById('vd-dental').style.display=tab==='dental'?'block':'none';
+  document.querySelectorAll('#section-vision-dental .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+function loadVisionDentalForm() {
+  const v=gd('vision',{}); const d=gd('dental',{});
+  ['od-sphere','od-cyl','od-axis','os-sphere','os-cyl','os-axis','exam-date','exam-next','doctor','phone','address'].forEach(k=>{ const el=document.getElementById('eye-'+k); if(el) el.value=v[k.replace(/-/g,'')]||''; });
+  ['name','phone','address','last','next','notes'].forEach(k=>{ const el=document.getElementById('dent-'+k); if(el) el.value=d[k]||''; });
+}
+function saveVision() {
+  const d={}; ['od-sphere','od-cyl','od-axis','os-sphere','os-cyl','os-axis','exam-date','exam-next','doctor','phone','address'].forEach(k=>{ const el=document.getElementById('eye-'+k); if(el) d[k.replace(/-/g,'')]=el.value; }); sd('vision',d);
+}
+function saveDental() {
+  const d={}; ['name','phone','address','last','next','notes'].forEach(k=>{ const el=document.getElementById('dent-'+k); if(el) d[k]=el.value; }); sd('dental',d);
+}
+
+// ── MEDICAL DEVICES ──
+function renderDevices() {
+  const items=gd('devices',[]);
+  if(!items.length) { document.getElementById('devices-list').innerHTML='<div class="empty-state"><span class="empty-icon">🔧</span><p>No medical devices recorded.</p></div>'; return; }
+  let html='';
+  items.forEach(d=>{
+    const serviceSoon=d.warranty&&(new Date(d.warranty)-Date.now())<(90*86400000);
+    html+=`<div class="list-item"><div style="font-size:28px;flex-shrink:0">🔧</div><div class="list-item-content">
+      <div class="list-item-title">${esc(d.name)} <span class="badge badge-gray">${esc(d.type)}</span></div>
+      <div class="list-item-subtitle">
+        ${d.serial?'S/N: '+esc(d.serial)+' · ':''}${d.date?'Since: '+fmt(d.date):''}
+        ${d.warranty?'<br>Service due: <span style="color:'+(serviceSoon?'var(--emergency)':'inherit')+'">'+fmt(d.warranty)+'</span>':''}
+        ${d.notes?'<br>'+esc(d.notes):''}
+      </div>
+    </div>
+    <button class="btn-icon danger owner-only" onclick="deleteItem('devices','${d.id}',renderDevices)">🗑️</button></div>`;
+  });
+  const el=document.getElementById('devices-list'); el.innerHTML=html; lockBtns(el);
+}
+function addDevice() {
+  const name=val('dev-name').trim(); if(!name) return;
+  const items=gd('devices',[]); items.push({id:uid(),name,type:val('dev-type'),serial:val('dev-serial'),date:val('dev-date'),warranty:val('dev-warranty'),notes:val('dev-notes')});
+  sd('devices',items); clearFields(['dev-name','dev-serial','dev-date','dev-warranty','dev-notes']); renderDevices();
+}
+
+// ── SYMPTOM JOURNAL ──
+function setSymptomDatetime() {
+  const el=document.getElementById('sj-datetime'); if(el&&!el.value) el.value=new Date().toISOString().slice(0,16);
+}
+function renderSymptoms() {
+  const items=gd('symptoms',[]); const el=document.getElementById('symptom-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state"><span class="empty-icon">📝</span><p>No symptoms logged yet.</p></div>'; return; }
+  const sevColor=['','var(--success)','var(--success)','var(--success)','#e3b341','#e3b341','var(--warning)','var(--warning)','var(--warning)','var(--emergency)','var(--emergency)'];
+  el.innerHTML=[...items].reverse().map(s=>`<div class="list-item"><div class="list-item-content">
+    <div class="list-item-title">${esc(s.text)}</div>
+    <div class="list-item-subtitle">${fmt(s.datetime)} · Severity: <span style="font-weight:700;color:${sevColor[+s.severity]||'inherit'}">${s.severity}/10</span></div>
+  </div><button class="btn-icon danger owner-only" onclick="deleteItem('symptoms','${s.id}',renderSymptoms)">🗑️</button></div>`).join('');
+  lockBtns(el);
+}
+function addSymptom() {
+  const text=val('sj-text').trim(); if(!text) return;
+  const items=gd('symptoms',[]); items.push({id:uid(),text,datetime:val('sj-datetime')||new Date().toISOString().slice(0,16),severity:document.getElementById('sj-severity').value});
+  sd('symptoms',items); clearFields(['sj-text']); setSymptomDatetime(); renderSymptoms();
+}
+async function analyzeSymptoms() {
+  if(!isPremium()) { showUpgradeToast(); return; }
+  const items=gd('symptoms',[]); if(!items.length) { alert('Log some symptoms first.'); return; }
+  const conds=gd('conditions',[]); const meds=gd('medications',[]);
+  showInfo('sj-ai-result','⏳ Analyzing your symptom patterns — up to 60 seconds...');
+  try {
+    const r=await fetch(`${BACKEND}/api/analyze-symptoms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symptoms:items,conditions:conds,medications:meds})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'Server error');
+    showInfo('sj-ai-result',`<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 AI Symptom Pattern Analysis</strong><div style="margin-top:10px;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div><div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px">${esc(d.disclaimer||'')}</div></div>`);
+  } catch(e) {
+    showInfo('sj-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
+  }
+}
+
+// ── HEALTH GOALS ──
+function renderGoals() {
+  const items=gd('health_goals',[]); const el=document.getElementById('goals-list');
+  if(!items.length) { el.innerHTML='<div class="empty-state"><span class="empty-icon">🎯</span><p>No health goals yet. Set a goal to track your progress.</p></div>'; return; }
+  let html='';
+  items.forEach(g=>{
+    let pct=0;
+    // Simple numeric progress estimate if possible
+    const curr=parseFloat(g.current); const tgt=parseFloat(g.target);
+    if(!isNaN(curr)&&!isNaN(tgt)&&tgt>0) pct=Math.min(100,Math.round((curr/tgt)*100));
+    html+=`<div class="card" style="padding:16px 18px"><div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:16px;font-weight:700">${esc(g.name)}</div><div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Current: <strong>${esc(g.current)}</strong> → Target: <strong>${esc(g.target)}</strong>${g.date?' by '+fmt(g.date):''}</div></div>
+      <button class="btn-icon danger owner-only" onclick="deleteItem('health_goals','${g.id}',renderGoals)">🗑️</button></div>
+      ${g.notes?`<div style="font-size:13px;color:var(--text-muted);margin-top:6px">${esc(g.notes)}</div>`:''}
+      <div style="margin-top:10px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Progress estimate: ${pct}%</div>
+      <div class="progress-bar"><div class="progress-fill ${pct>=80?'green':pct>=50?'':'orange'}" style="width:${pct}%"></div></div></div>
+    </div>`;
+  });
+  el.innerHTML=html; lockBtns(el);
+}
+function addGoal() {
+  const name=val('goal-name').trim(); if(!name) return;
+  const items=gd('health_goals',[]); items.push({id:uid(),name,target:val('goal-target'),current:val('goal-current'),date:val('goal-date'),notes:val('goal-notes')});
+  sd('health_goals',items); clearFields(['goal-name','goal-target','goal-current','goal-date','goal-notes']); renderGoals();
+}
+
+// ── FAMILY PROFILES ──
+function renderFamilyProfiles() {
+  const profiles=JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}family_profiles`)||'[]');
+  const el=document.getElementById('family-list');
+  if(!profiles.length) { el.innerHTML='<div class="empty-state"><span class="empty-icon">👨‍👩‍👧</span><p>No additional profiles. Your own profile is always the default.</p></div>'; return; }
+  let html='';
+  profiles.forEach(p=>{
+    const isActive=p.id===activeProfileId;
+    html+=`<div class="list-item" ${isActive?'style="border-color:var(--accent)"':''}>
+      <div style="font-size:28px">👤</div>
+      <div class="list-item-content">
+        <div class="list-item-title">${esc(p.name)} ${isActive?'<span class="badge badge-teal">Active</span>':''}</div>
+        <div class="list-item-subtitle">${esc(p.relationship)}${p.dob?' · Born: '+fmt(p.dob):''}</div>
+      </div>
+      <div class="list-item-actions">
+        ${!isActive?`<button class="btn btn-sm btn-primary" onclick="switchProfile('${p.id}')">Switch to</button>`:''}
+        ${!isActive?`<button class="btn-icon danger owner-only" onclick="deleteFamilyProfile('${p.id}')">🗑️</button>`:''}
+      </div>
+    </div>`;
+  });
+  // Default profile button
+  html=`<div class="list-item" ${activeProfileId==='default'?'style="border-color:var(--accent)"':''}>
+    <div style="font-size:28px">👤</div>
+    <div class="list-item-content"><div class="list-item-title">My Profile ${activeProfileId==='default'?'<span class="badge badge-teal">Active</span>':''}</div><div class="list-item-subtitle">Primary account holder</div></div>
+    ${activeProfileId!=='default'?`<div class="list-item-actions"><button class="btn btn-sm btn-primary" onclick="switchProfile('default')">Switch to</button></div>`:''}
+  </div>`+html;
+  el.innerHTML=html; lockBtns(el);
+}
+function addFamilyProfile() {
+  const name=val('fam-name').trim(); if(!name) return;
+  const profiles=JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}family_profiles`)||'[]');
+  profiles.push({id:uid(),name,relationship:val('fam-rel'),dob:val('fam-dob')});
+  localStorage.setItem(`${STORAGE_PREFIX}family_profiles`,JSON.stringify(profiles));
+  clearFields(['fam-name','fam-rel','fam-dob']); renderFamilyProfiles();
+}
+function switchProfile(id) {
+  activeProfileId=id;
+  const profiles=JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}family_profiles`)||'[]');
+  const p=profiles.find(x=>x.id===id);
+  const name=p?p.name:id==='default'?'My Profile':'Profile';
+  document.getElementById('active-profile-name').textContent=name;
+  renderFamilyProfiles();
+  // refresh any open section
+  showSection('dashboard');
+}
+function deleteFamilyProfile(id) {
+  if(!isOwner()) return;
+  if(!confirm('Delete this profile and all its data?')) return;
+  const profiles=JSON.parse(localStorage.getItem(`${STORAGE_PREFIX}family_profiles`)||'[]');
+  localStorage.setItem(`${STORAGE_PREFIX}family_profiles`,JSON.stringify(profiles.filter(p=>p.id!==id)));
+  // remove all data keys for this profile
+  Object.keys(localStorage).filter(k=>k.startsWith(`${STORAGE_PREFIX}${id}_`)).forEach(k=>localStorage.removeItem(k));
+  if(activeProfileId===id) switchProfile('default');
+  renderFamilyProfiles();
+}
+
+// ── SETTINGS ──
+function loadSettingsPage() {
+  const s=getSettings();
+  document.getElementById('sub-status-display').textContent=s.isPremium?'⭐ Premium — Active':'🔓 Free Plan';
+  document.getElementById('sub-status-display').style.color=s.isPremium?'var(--accent)':'var(--text-secondary)';
+  document.getElementById('btn-toggle-premium').textContent=s.isPremium?'Cancel Premium (revert to Free)':'⭐ Activate Premium (Dev Mode)';
+}
+function saveOwnerPin() {
+  const pin=document.getElementById('owner-pin-input').value;
+  const confirm=document.getElementById('owner-pin-confirm').value;
+  const msg=document.getElementById('owner-pin-msg');
+  if(pin.length<4||pin.length>6||!/^\d+$/.test(pin)) { msg.style.color='var(--emergency)'; msg.textContent='PIN must be 4–6 digits.'; return; }
+  if(pin!==confirm) { msg.style.color='var(--emergency)'; msg.textContent='PINs do not match.'; return; }
+  const s=getSettings(); s.ownerPin=pin; saveSettings(s);
+  sessionAuth='owner';
+  msg.style.color='var(--success)'; msg.textContent='Owner PIN saved. ✓';
+  document.getElementById('owner-pin-input').value=''; document.getElementById('owner-pin-confirm').value='';
+}
+function clearOwnerPin() { if(!confirm('Remove owner PIN?')) return; const s=getSettings(); s.ownerPin=''; saveSettings(s); document.getElementById('owner-pin-msg').textContent='PIN cleared.'; }
+function saveCaregiverPin() {
+  const pin=document.getElementById('cg-pin-input').value;
+  const confirm=document.getElementById('cg-pin-confirm').value;
+  const msg=document.getElementById('cg-pin-msg');
+  if(pin.length<4||pin.length>6||!/^\d+$/.test(pin)) { msg.style.color='var(--emergency)'; msg.textContent='PIN must be 4–6 digits.'; return; }
+  if(pin!==confirm) { msg.style.color='var(--emergency)'; msg.textContent='PINs do not match.'; return; }
+  const s=getSettings(); s.caregiverPin=pin; saveSettings(s);
+  msg.style.color='var(--success)'; msg.textContent='Caregiver PIN saved. ✓';
+  document.getElementById('cg-pin-input').value=''; document.getElementById('cg-pin-confirm').value='';
+}
+function clearCaregiverPin() { if(!confirm('Remove caregiver PIN?')) return; const s=getSettings(); s.caregiverPin=''; saveSettings(s); document.getElementById('cg-pin-msg').textContent='PIN cleared.'; }
+function togglePremium() {
+  const s=getSettings(); s.isPremium=!s.isPremium; saveSettings(s); loadSettingsPage();
+  if(s.isPremium) alert('⭐ Premium activated! (Dev mode — no payment required)');
+  else alert('Reverted to Free plan.');
+}
+function exportData() {
+  const data={exported:new Date().toISOString(),profile:activeProfileId,data:{}};
+  Object.keys(localStorage).filter(k=>k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k=>{ data.data[k]=JSON.parse(localStorage.getItem(k)); });
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`myice-export-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
+}
+function clearAllData() {
+  if(!confirm('DELETE ALL DATA for this profile? This cannot be undone.')) return;
+  if(!confirm('Are you absolutely sure? All health data will be permanently erased.')) return;
+  Object.keys(localStorage).filter(k=>k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k=>localStorage.removeItem(k));
+  sessionAuth=null; location.reload();
+}
+
+// ── GENERIC DELETE HELPER ──
+function deleteItem(storageKey,id,refreshFn) {
+  if(!isOwner()) return;
+  if(!confirm('Delete this entry?')) return;
+  sd(storageKey,gd(storageKey,[]).filter(x=>x.id!==id));
+  if(typeof refreshFn==='function') refreshFn();
+}
+
+// ── FORM HELPERS ──
+function val(id) { const el=document.getElementById(id); return el ? el.value : ''; }
+function numVal(id) { const el=document.getElementById(id); if(!el||!el.value) return null; const n=parseFloat(el.value); return isNaN(n)?null:n; }
+function setValue(id,v) { const el=document.getElementById(id); if(el) el.value=v||''; }
+function clearFields(ids) { ids.forEach(id=>setValue(id,'')); }
+function showInfo(containerId, html) { const el=document.getElementById(containerId); if(el) el.innerHTML=html; }
+function showUpgradeToast() { alert('🔒 This feature requires Premium.\n\nUpgrade to Premium ($3/month in LCAI) in Settings to unlock AI-powered features.'); }
+
+// ── INIT ──
+function init() {
+  // Load profile name
+  const profile=gd('profile',{});
+  if(profile.name) document.getElementById('active-profile-name').textContent=profile.name;
+
+  // Show dashboard on start — no auth required initially
+  const s=getSettings();
+  if(!s.ownerPin && !s.caregiverPin) {
+    sessionAuth='owner';
+    showSection('dashboard');
+  } else {
+    // Show emergency view is always available; show dashboard after auth
+    showSection('dashboard');
+  }
+
+  // Set today's date for date inputs that need defaults
+  const today=new Date().toISOString().slice(0,10);
+  ['lab-date','vax-date','bill-date','surg-date','hosp-date','event-date','appt-date','doc-date'].forEach(id=>{
+    const el=document.getElementById(id); if(el&&!el.value) el.value=today;
+  });
+}
+
+window.addEventListener('DOMContentLoaded', init);
+
+// keyboard PIN entry
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('pin-modal').classList.contains('visible')) return;
+  if(e.key>='0' && e.key<='9') pinPress(e.key);
+  else if(e.key==='Backspace') pinPress('del');
+  else if(e.key==='Escape') pinSkip();
+});
+</script>
+</body>
+</html>
