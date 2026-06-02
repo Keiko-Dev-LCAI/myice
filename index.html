@@ -3820,17 +3820,18 @@ function updateAcctHeaderBtn() {
   const acct  = getAccount();
   if(!btn) return;
   btn.style.display = 'flex';
+  const mobile = window.innerWidth <= 768;
   if(!acct) {
-    label.textContent = '🔑 Login';
+    label.textContent = mobile ? '🔑' : '🔑 Login';
     btn.title = 'Create account or login';
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   } else if(_sessionLoggedIn) {
-    label.textContent = '👤 ' + acct.username;
-    btn.title = 'Tap to lock session / logout';
+    label.textContent = mobile ? '👤' : '👤 ' + acct.username;
+    btn.title = acct.username + ' — tap for account menu';
     btn.onclick = () => showAcctMenu();
   } else {
-    label.textContent = '🔒 ' + acct.username;
-    btn.title = 'Your session is locked — tap to log back in';
+    label.textContent = mobile ? '🔒' : '🔒 ' + acct.username;
+    btn.title = 'Locked — tap to log back in as ' + acct.username;
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   }
 }
@@ -3903,10 +3904,8 @@ function renderAcctSettings() {
 
 function initAccount() {
   updateAcctHeaderBtn();
-  // Welcome back toast if account exists but session is locked
   const acct = getAccount();
-  if(acct && !_sessionLoggedIn) {
-    setTimeout(() => showToast('👋 Welcome back, ' + acct.username + '! Tap 🔒 in the header to log back in.'), 1200);
+  if(acct && false) { // toast removed — header lock icon is enough
   }
   // Try loading emergency data from chain on startup (non-blocking)
   setTimeout(loadFromChain, 2000);
