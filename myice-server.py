@@ -23,10 +23,22 @@ PORT = int(os.environ.get("PORT", 5000))
 TEST_MODE = os.environ.get("MYICE_TEST_MODE", "").lower() in ("true", "1", "yes")
 
 MEDICAL_DISCLAIMER = (
-    "⚠️ MyICE is a personal health organizer — not a medical device. "
-    "This AI analysis is for informational purposes only and is not a substitute "
-    "for professional medical advice, diagnosis, or treatment. "
-    "Always consult a qualified healthcare provider with questions about your health."
+    "🔴 IMPORTANT: This AI output is for general informational awareness only — it is NOT medical advice, "
+    "NOT a diagnosis, and NOT a treatment recommendation. AI can be wrong. "
+    "Do NOT change, stop, or start any medication or treatment based on this information. "
+    "Always consult your doctor or pharmacist before making any changes to your health care."
+)
+
+AI_FRAMING_RULE = (
+    "CRITICAL INSTRUCTION: You must NEVER give definitive medical conclusions. "
+    "NEVER say a medication combination 'is dangerous', 'is safe', 'should be stopped', or 'must be changed'. "
+    "NEVER diagnose a condition. NEVER recommend starting, stopping, or changing any medication or treatment. "
+    "Instead, use informational language: 'may be worth discussing with your doctor', "
+    "'your pharmacist might want to review', 'some people find that...', 'research suggests...', "
+    "'this is something to bring up at your next appointment'. "
+    "Every response must end with: 'Please bring this information to your doctor or pharmacist "
+    "before making any changes. They can review your full health picture and give you personalized guidance.' "
+    "You are providing background information to help the patient have better conversations with their healthcare team — nothing more."
 )
 
 
@@ -498,17 +510,18 @@ def analyze_labs():
     context_block = (" " + " ".join(context_parts)) if context_parts else ""
 
     prompt = (
-        f"You are a helpful medical AI assistant explaining lab results in plain English to a patient.{context_block}\n\n"
+        f"{AI_FRAMING_RULE}\n\n"
+        f"You are a helpful health information assistant helping a patient understand their lab results in plain English.{context_block}\n\n"
         f"Lab report name: {test_name}\n"
         f"Lab report text:\n{lab_text}\n\n"
         "Please provide:\n"
-        "1. A brief plain-English summary of what this test measures and what the results mean overall.\n"
-        "2. A list of any values that are flagged HIGH or LOW — explain what each one means and why it matters.\n"
-        "3. Any values that are within normal range that are worth noting.\n"
-        "4. 2-3 practical questions the patient should ask their doctor at their next appointment.\n"
-        "5. Any patterns worth noting if the patient's health context is relevant.\n\n"
-        "Be clear, compassionate, and practical. Use simple language — no medical jargon without explanation. "
-        "End with a brief reminder that this is for informational purposes and they should discuss results with their doctor."
+        "1. A plain-English explanation of what this test measures — background context only.\n"
+        "2. For any values flagged HIGH or LOW: explain what that value generally measures in the body. "
+        "Do NOT say values 'are a problem' — say 'your doctor may want to discuss this value with you'.\n"
+        "3. 2-3 questions the patient could bring to their doctor about these results.\n"
+        "4. Any context from the patient's conditions or medications that might be worth mentioning to their doctor.\n\n"
+        "Use simple, friendly language. Frame everything as background information to help the patient "
+        "have a more informed conversation with their healthcare provider — not as conclusions or diagnoses."
     )
 
     try:
@@ -544,18 +557,20 @@ def check_interactions():
     cond_list = [c.get("name", "") for c in conditions if c.get("name")]
 
     prompt = (
-        "You are a helpful medical AI assistant checking for drug interactions and medication safety.\n\n"
-        f"Medications being taken:\n" + "\n".join(f"- {m}" for m in med_list) + "\n\n"
+        f"{AI_FRAMING_RULE}\n\n"
+        "You are a helpful health information assistant providing general background on medications.\n\n"
+        f"Medications listed:\n" + "\n".join(f"- {m}" for m in med_list) + "\n\n"
         + (f"Patient's medical conditions: {', '.join(cond_list)}\n\n" if cond_list else "")
-        + "Please check for:\n"
-        "1. Any dangerous drug-drug interactions between these medications.\n"
-        "2. Any medications that may worsen the listed conditions.\n"
-        "3. Any important warnings (e.g. avoid alcohol, grapefruit, certain foods).\n"
-        "4. Any duplicate medications or overlapping drug classes.\n"
-        "5. Any dosage concerns worth flagging.\n\n"
-        "Be specific — name which medications interact and explain what the risk is in plain English. "
-        "If no significant interactions are found, say so clearly. "
-        "End with a reminder to verify with a pharmacist."
+        + "Please provide general informational background on:\n"
+        "1. Any combinations of these medications that are sometimes associated with interactions — "
+        "describe what the interaction involves in plain English, framed as 'worth discussing with your pharmacist'.\n"
+        "2. Any of these medications that are sometimes associated with worsening certain conditions — "
+        "frame as 'your doctor may want to review this'.\n"
+        "3. Any general precautions commonly mentioned for these medications (e.g. foods, activities) — "
+        "frame as general awareness, not personal advice.\n"
+        "4. Any medications in the list that belong to the same drug class — mention for awareness only.\n\n"
+        "If nothing notable comes up, say so clearly. "
+        "Never say any combination 'is dangerous' or 'must be changed' — only that it may be worth a conversation."
     )
 
     try:
@@ -580,21 +595,22 @@ def explain_medication():
     cond_list = [c.get("name", "") for c in conditions if c.get("name")]
 
     prompt = (
-        f"You are a helpful medical AI assistant explaining a medication to a patient in plain English.\n\n"
+        f"{AI_FRAMING_RULE}\n\n"
+        f"You are a helpful health information assistant providing general background on a medication.\n\n"
         f"Medication: {med_name}"
         + (f" {dosage}" if dosage else "")
         + (f" taken {route}" if route else "")
         + "\n"
         + (f"Patient conditions: {', '.join(cond_list)}\n" if cond_list else "")
-        + "\nPlease explain:\n"
-        "1. What this medication is used for — its main purpose in plain English.\n"
-        "2. How it works in the body (brief, simple explanation).\n"
-        "3. The most common side effects to watch for.\n"
-        "4. Important warnings — foods, activities, or other things to avoid.\n"
-        "5. What to do if a dose is missed.\n"
-        "6. Any specific notes relevant to the patient's conditions if listed.\n\n"
-        "Use simple, friendly language. No jargon without explanation. "
-        "End with a reminder to follow the prescribing doctor's instructions."
+        + "\nPlease provide general background information on:\n"
+        "1. What this medication is commonly used for — general purpose in plain English.\n"
+        "2. How it generally works in the body (brief, simple explanation).\n"
+        "3. Common side effects that are generally associated with this medication — for awareness only.\n"
+        "4. General precautions commonly mentioned (foods, activities) — for awareness only.\n"
+        "5. General guidance on missed doses — frame as 'a common approach is...' not personal advice.\n\n"
+        "Use simple, friendly language. Frame everything as general information, not personal medical advice. "
+        "Remind the patient to always follow their prescribing doctor's specific instructions, "
+        "which may differ from general information."
     )
 
     try:
@@ -662,14 +678,16 @@ def chat():
     context_block = ("\n\nPatient health context:\n" + " ".join(context_parts)) if context_parts else ""
 
     prompt = (
-        "You are MyICE Health Assistant — a helpful, knowledgeable, and compassionate AI health companion. "
-        "You help patients understand their health information, prepare for doctor visits, and make sense of medical documents. "
-        "You do NOT diagnose conditions or prescribe treatments. You explain things clearly in plain English and always recommend "
-        "consulting a healthcare provider for medical decisions."
+        f"{AI_FRAMING_RULE}\n\n"
+        "You are MyICE Health Assistant — a helpful, compassionate health information companion. "
+        "You help patients understand general health information and prepare better questions for their doctor visits. "
+        "You do NOT diagnose, prescribe, or give personalized medical advice — ever. "
+        "You provide general background information only, always directing the patient to their healthcare provider for anything specific."
         + context_block
         + f"\n\nPatient question: {message}\n\n"
-        "Answer helpfully and clearly. If the question involves something that requires a doctor's assessment, "
-        "say so kindly while still giving useful background information. Keep your response concise and practical."
+        "Provide helpful general background information. If the question requires a personal medical assessment, "
+        "acknowledge the question warmly, provide relevant general information, and clearly direct them to their doctor or pharmacist. "
+        "Keep responses concise, friendly, and practical."
     )
 
     try:
@@ -707,18 +725,21 @@ def analyze_symptoms():
     med_list  = [m.get("name", "") for m in medications if m.get("name")]
 
     prompt = (
-        "You are a helpful medical AI assistant analyzing a patient's symptom journal.\n\n"
+        f"{AI_FRAMING_RULE}\n\n"
+        "You are a helpful health information assistant helping a patient review their symptom journal.\n\n"
         "Symptom entries (most recent 30):\n"
         + "\n".join(symptom_lines)
         + "\n\n"
         + (f"Known conditions: {', '.join(cond_list)}\n" if cond_list else "")
         + (f"Current medications: {', '.join(med_list)}\n" if med_list else "")
         + "\nPlease:\n"
-        "1. Identify any patterns — symptoms that recur, worsen over time, or cluster around certain days.\n"
-        "2. Note any symptoms that may be related to listed conditions or medications (side effects, flares, etc.).\n"
-        "3. Flag any symptom patterns that warrant prompt medical attention.\n"
-        "4. Suggest 2-3 specific things the patient should mention at their next doctor's appointment.\n\n"
-        "Be practical and specific. Use the actual symptom names and dates from the data."
+        "1. Identify any patterns — symptoms that appear to recur or cluster — for the patient's awareness.\n"
+        "2. Note any symptoms that might be worth mentioning to their doctor in relation to listed conditions or medications.\n"
+        "3. Suggest 3-4 specific observations from the journal the patient could share with their doctor — "
+        "framed as 'you might want to mention to your doctor that...'.\n\n"
+        "Do NOT suggest what might be wrong or what the symptoms mean medically. "
+        "Focus on helping the patient describe their experience clearly to their healthcare provider. "
+        "Use the actual symptom names and dates from the data."
     )
 
     try:
