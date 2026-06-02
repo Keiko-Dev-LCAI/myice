@@ -3820,15 +3820,38 @@ function updateAcctHeaderBtn() {
   if(!btn) return;
   btn.style.display = 'flex';
   if(!acct) {
-    label.textContent = 'Login';
+    label.textContent = '🔑 Login';
     btn.title = 'Create account or login';
+    btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   } else if(_sessionLoggedIn) {
-    label.textContent = acct.username;
-    btn.title = 'Account settings';
+    label.textContent = '👤 ' + acct.username;
+    btn.title = 'Tap to lock session / logout';
+    btn.onclick = () => showAcctMenu();
   } else {
-    label.textContent = 'Login';
-    btn.title = 'Login to your account';
+    label.textContent = '🔒 ' + acct.username;
+    btn.title = 'Your session is locked — tap to log back in';
+    btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   }
+}
+
+function showAcctMenu() {
+  // Remove existing menu if open
+  const old = document.getElementById('acct-dropdown');
+  if(old) { old.remove(); return; }
+  const btn = document.getElementById('acct-header-btn');
+  const rect = btn.getBoundingClientRect();
+  const menu = document.createElement('div');
+  menu.id = 'acct-dropdown';
+  menu.style.cssText = `position:fixed;top:${rect.bottom+6}px;right:12px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;z-index:9000;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,0.5);overflow:hidden`;
+  menu.innerHTML = `
+    <div style="padding:12px 16px;font-size:18px;color:var(--text-muted);border-bottom:1px solid var(--border)">Signed in</div>
+    <button onclick="navTo('settings');document.getElementById('acct-dropdown').remove()" style="display:block;width:100%;text-align:left;padding:14px 16px;font-size:18px;background:none;border:none;color:var(--text-primary);cursor:pointer">⚙️ Account Settings</button>
+    <button onclick="doLogout();document.getElementById('acct-dropdown').remove()" style="display:block;width:100%;text-align:left;padding:14px 16px;font-size:18px;background:none;border:none;color:var(--emergency);cursor:pointer">🔒 Lock / Log Out</button>`;
+  document.body.appendChild(menu);
+  // Close when clicking outside
+  setTimeout(() => document.addEventListener('click', function h(e){
+    if(!menu.contains(e.target) && e.target !== btn){ menu.remove(); document.removeEventListener('click',h); }
+  }), 50);
 }
 
 function renderAcctSettings() {
@@ -3879,6 +3902,11 @@ function renderAcctSettings() {
 
 function initAccount() {
   updateAcctHeaderBtn();
+  // Welcome back toast if account exists but session is locked
+  const acct = getAccount();
+  if(acct && !_sessionLoggedIn) {
+    setTimeout(() => showToast('👋 Welcome back, ' + acct.username + '! Tap 🔒 in the header to log back in.'), 1200);
+  }
   // Try loading emergency data from chain on startup (non-blocking)
   setTimeout(loadFromChain, 2000);
 }
