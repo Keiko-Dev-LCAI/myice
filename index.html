@@ -419,7 +419,7 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
       </div>
     </div>
     <div class="header-right">
-      <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="showSection('family')">
+      <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
       <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;display:none">🔐 <span id="acct-header-label">Login</span></button>
@@ -1427,8 +1427,8 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 <div class="section" id="section-family">
   <div class="section-title"><span class="title-icon">👨‍👩‍👧</span> Family Profiles</div>
   <div style="background:var(--accent-dim);border:1px solid rgba(0,180,216,0.25);border-radius:10px;padding:14px 18px;font-size:14px;color:var(--text-secondary);margin-bottom:18px;line-height:1.6">
-    👤 <strong style="color:var(--text-primary)">Your own profile is already set up</strong> — fill in your details under <strong>My Profile</strong> in the sidebar.<br>
-    Use this section to manage health records for other people you care for (spouse, child, parent, etc.). Each gets their own complete, separate record.
+    👤 <strong style="color:var(--text-primary)">This is not your own profile.</strong> Your own medical record lives under <strong>My Profile</strong> in the sidebar.<br>
+    Use this section to store health records for other people you care for — spouse, child, parent, caregiver, etc. Each gets their own complete, separate record.
   </div>
   <div class="card">
     <div class="card-title">Add Another Profile</div>
@@ -1445,6 +1445,7 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
           <option value="Sibling">Sibling</option>
           <option value="Grandparent">Grandparent</option>
           <option value="Grandchild">Grandchild</option>
+          <option value="Caregiver">Caregiver</option>
           <option value="Other">Other</option>
         </select>
       </div>
