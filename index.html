@@ -276,24 +276,24 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 }
 
 /* ── ONBOARDING OVERLAY ── */
-#onboarding-overlay{display:none;position:fixed;inset:0;background:#0d1117;z-index:9999;align-items:stretch;justify-content:stretch;overflow:hidden}
+#onboarding-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;overflow:hidden}
 #onboarding-overlay.visible{display:flex}
 body.ob-open{overflow:hidden}
-.ob-dialog{background:var(--bg-card);width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;border-radius:0}
-.ob-header{padding:28px 48px 22px;border-bottom:2px solid var(--border);flex-shrink:0;background:var(--bg-secondary)}
+.ob-dialog{background:var(--bg-card);width:50vw;height:95vh;display:flex;flex-direction:column;overflow:hidden;border-radius:16px;border:1px solid var(--border)}
+.ob-header{padding:28px 36px 22px;border-bottom:2px solid var(--border);flex-shrink:0;background:var(--bg-secondary);border-radius:16px 16px 0 0}
 .ob-header h2{font-size:26px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:10px}
 .ob-header p{font-size:16px;color:var(--text-secondary);line-height:1.5}
-.ob-body{padding:32px 48px;overflow-y:scroll;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
-.ob-footer{padding:24px 48px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:12px;background:var(--bg-secondary)}
+.ob-body{padding:32px 36px;overflow-y:scroll;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
+.ob-footer{padding:24px 36px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:12px;background:var(--bg-secondary);border-radius:0 0 16px 16px}
 .ob-step{display:none}.ob-step.active{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
-.ob-disclaimer-text{font-size:17px;color:var(--text-secondary);line-height:1.85}
-.ob-disclaimer-text h4{font-size:18px;font-weight:800;color:var(--text-primary);margin:28px 0 10px}
+.ob-disclaimer-text{font-size:34px;color:var(--text-secondary);line-height:1.7}
+.ob-disclaimer-text h4{font-size:36px;font-weight:800;color:var(--text-primary);margin:36px 0 14px}
 .ob-disclaimer-text h4:first-child{margin-top:0}
 .ob-disclaimer-text p{margin-bottom:0}
 .ob-divider{height:1px;background:var(--border);margin:14px 0}
 .ob-check-row{display:flex;align-items:flex-start;gap:12px;margin-top:20px;padding:14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border)}
-.ob-check-row input[type=checkbox]{width:24px;height:24px;flex-shrink:0;margin-top:2px;cursor:pointer;accent-color:var(--accent)}
-.ob-check-row label{font-size:17px;color:var(--text-secondary);line-height:1.6;cursor:pointer}
+.ob-check-row input[type=checkbox]{width:30px;height:30px;flex-shrink:0;margin-top:4px;cursor:pointer;accent-color:var(--accent)}
+.ob-check-row label{font-size:34px;color:var(--text-secondary);line-height:1.5;cursor:pointer}
 .ob-tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px}
 @media(max-width:560px){.ob-tier-grid{grid-template-columns:1fr}}
 .ob-tier-card{background:var(--bg-secondary);border:2px solid var(--border);border-radius:12px;padding:20px 16px;cursor:pointer;transition:all 0.15s;text-align:center}
