@@ -284,7 +284,8 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   .stat-sub{font-size:18px}
   .list-item-title{font-size:22px}
   .list-item-subtitle{font-size:18px}
-  .btn{font-size:22px;white-space:normal;word-break:break-word}
+  .btn{font-size:22px}
+  .card .btn{white-space:normal;word-break:break-word}
   .badge{font-size:18px}
   .input,.select,.textarea{font-size:22px}
   .form-group label{font-size:18px}
@@ -650,7 +651,7 @@ body.ob-open{overflow:hidden}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
-      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px">🔐 <span id="acct-header-label">Login</span></button>
+      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis">🔐 <span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
