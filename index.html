@@ -283,9 +283,9 @@ body.ob-open{overflow:hidden}
 .ob-header{padding:28px 32px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
 .ob-header h2{font-size:22px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px}
 .ob-header p{font-size:14px;color:var(--text-secondary);line-height:1.5}
-.ob-body{padding:24px 32px;overflow-y:scroll;flex:1;-webkit-overflow-scrolling:touch}
+.ob-body{padding:24px 32px;overflow-y:scroll;flex:1;min-height:0;-webkit-overflow-scrolling:touch}
 .ob-footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:12px}
-.ob-step{display:none}.ob-step.active{display:block}
+.ob-step{display:none}.ob-step.active{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}
 .ob-disclaimer-text{font-size:15px;color:var(--text-secondary);line-height:1.8}
 .ob-disclaimer-text h4{font-size:15px;font-weight:700;color:var(--text-primary);margin:22px 0 8px}
 .ob-disclaimer-text h4:first-child{margin-top:0}
