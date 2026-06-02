@@ -275,6 +275,41 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   .em-info-grid{grid-template-columns:1fr}
 }
 
+/* ── ONBOARDING OVERLAY ── */
+#onboarding-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;align-items:center;justify-content:center;padding:16px}
+#onboarding-overlay.visible{display:flex}
+.ob-dialog{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.ob-header{padding:28px 32px 20px;border-bottom:1px solid var(--border);flex-shrink:0}
+.ob-header h2{font-size:22px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+.ob-header p{font-size:14px;color:var(--text-secondary);line-height:1.5}
+.ob-body{padding:24px 32px;overflow-y:auto;flex:1}
+.ob-footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;gap:12px}
+.ob-step{display:none}.ob-step.active{display:block}
+.ob-disclaimer-text{font-size:13px;color:var(--text-secondary);line-height:1.75}
+.ob-disclaimer-text h4{font-size:13px;font-weight:700;color:var(--text-primary);margin:18px 0 6px}
+.ob-disclaimer-text h4:first-child{margin-top:0}
+.ob-disclaimer-text p{margin-bottom:0}
+.ob-divider{height:1px;background:var(--border);margin:14px 0}
+.ob-check-row{display:flex;align-items:flex-start;gap:12px;margin-top:20px;padding:14px;background:var(--bg-secondary);border-radius:10px;border:1px solid var(--border)}
+.ob-check-row input[type=checkbox]{width:20px;height:20px;flex-shrink:0;margin-top:1px;cursor:pointer;accent-color:var(--accent)}
+.ob-check-row label{font-size:13px;color:var(--text-secondary);line-height:1.5;cursor:pointer}
+.ob-tier-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px}
+@media(max-width:560px){.ob-tier-grid{grid-template-columns:1fr}}
+.ob-tier-card{background:var(--bg-secondary);border:2px solid var(--border);border-radius:12px;padding:20px 16px;cursor:pointer;transition:all 0.15s;text-align:center}
+.ob-tier-card:hover{border-color:var(--accent)}
+.ob-tier-card.selected{border-color:var(--accent);background:var(--accent-dim)}
+.ob-tier-icon{font-size:32px;margin-bottom:10px}
+.ob-tier-name{font-size:15px;font-weight:800;margin-bottom:8px}
+.ob-tier-price{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px}
+.ob-tier-features{font-size:12px;color:var(--text-secondary);line-height:1.6;text-align:left}
+.ob-tier-features li{list-style:none;padding-left:0;margin-bottom:3px}
+.ob-tier-features li::before{content:"✓ ";color:var(--success)}
+.ob-tier-features li.no::before{content:"✗ ";color:var(--text-muted)}
+.ob-tier-features li.no{color:var(--text-muted)}
+.ob-progress{display:flex;gap:6px;align-items:center}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background 0.2s}
+.ob-dot.done{background:var(--accent)}
+
 /* ── ACCOUNT MODAL ── */
 .acct-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:center;justify-content:center;padding:16px}
 .acct-overlay.visible{display:flex}
@@ -301,6 +336,133 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 </style>
 </head>
 <body>
+
+<!-- ═══════════════════ ONBOARDING OVERLAY ═══════════════════ -->
+<div id="onboarding-overlay">
+  <div class="ob-dialog">
+    <div class="ob-header">
+      <h2>⚕️ Welcome to MyICE</h2>
+      <p>Personal Health Vault &amp; Emergency Medical ID &nbsp;·&nbsp; Built on Lightchain</p>
+    </div>
+
+    <!-- STEP 1: DISCLAIMER -->
+    <div class="ob-step active" id="ob-step-1">
+      <div class="ob-body">
+        <div class="ob-disclaimer-text">
+
+          <h4>1. What MyICE Is</h4>
+          <p>MyICE is a personal health information organizer and emergency medical ID tool built on the Lightchain blockchain. It is operated by an individual developer and provided as-is. It is <strong style="color:var(--text-primary)">not a medical service, not a licensed healthcare provider, and not a substitute for professional medical care.</strong></p>
+          <div class="ob-divider"></div>
+
+          <h4>2. Not Medical Advice</h4>
+          <p>Nothing in this app — including AI-generated responses, drug interaction checks, lab result analysis, symptom analysis, or any other feature — constitutes medical advice, diagnosis, or treatment. All information is for general informational purposes only. <strong style="color:var(--text-primary)">Always consult a qualified healthcare professional for any medical decisions.</strong> In an emergency, call 911 or your local emergency number immediately. Do not rely on this app in place of emergency services.</p>
+          <div class="ob-divider"></div>
+
+          <h4>3. You Are Responsible for Your Data</h4>
+          <p>You are solely responsible for the accuracy, completeness, and currency of all health information you enter. MyICE does not verify any information you provide. Inaccurate or incomplete information could mislead first responders or healthcare providers. The operator is not responsible for any harm arising from incorrect, missing, or outdated information in your records.</p>
+          <div class="ob-divider"></div>
+
+          <h4>4. Data Loss &amp; No Guarantee of Preservation</h4>
+          <p>Guest users store data in their browser only. Clearing your browser cache, switching devices, or reinstalling your browser will permanently delete all your data. Free account users can manually back up emergency data to the blockchain — but blockchain availability is not guaranteed. Premium users receive automatic sync but this does not guarantee data preservation in all circumstances. <strong style="color:var(--text-primary)">The operator is not responsible for any loss of health data under any circumstances.</strong> You are strongly encouraged to maintain your own backups (e.g., printed copies of critical medical information).</p>
+          <div class="ob-divider"></div>
+
+          <h4>5. Payments &amp; No Refunds</h4>
+          <p>Premium subscription payments are made in LCAI on the Lightchain blockchain. All on-chain transactions are final and irreversible. <strong style="color:var(--text-primary)">No refunds will be issued under any circumstances</strong>, including service interruptions, cancellations, dissatisfaction, or accidental payment. By making a payment you acknowledge the irreversible nature of blockchain transactions. The operator is not a licensed financial service and does not provide financial advice.</p>
+          <div class="ob-divider"></div>
+
+          <h4>6. Service May Change or Stop Permanently</h4>
+          <p>MyICE may be modified, suspended, or <strong style="color:var(--text-primary)">permanently discontinued at any time without notice.</strong> AI features depend on the availability of the Lightchain AIVM network, which is outside the operator's control and may be unavailable at any time. The operator has no obligation to provide advance notice of shutdown, data export tools, or refunds in the event of permanent closure.</p>
+          <div class="ob-divider"></div>
+
+          <h4>7. Security &amp; Privacy</h4>
+          <p>Emergency data (blood type, allergies, DNR status, emergency contacts) is stored publicly on the blockchain and is readable by anyone with your on-chain address. Private health data is encrypted with your password before being stored on-chain — if you forget your password, your private data cannot be recovered. The operator does not have access to your passwords or encryption keys and cannot recover lost data. You are responsible for keeping your credentials secure.</p>
+          <div class="ob-divider"></div>
+
+          <h4>8. No Warranty — Service Provided AS-IS</h4>
+          <p>THIS SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. THE OPERATOR DOES NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, ERROR-FREE, SECURE, OR FREE FROM DATA LOSS.</p>
+          <div class="ob-divider"></div>
+
+          <h4>9. Limitation of Liability</h4>
+          <p>TO THE FULLEST EXTENT PERMITTED BY LAW, THE OPERATOR SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THIS SERVICE, INCLUDING BUT NOT LIMITED TO DATA LOSS, MEDICAL HARM, INACCURATE AI OUTPUT, SERVICE INTERRUPTION, UNAUTHORIZED ACCESS, BLOCKCHAIN FAILURES, OR PERMANENT SHUTDOWN. YOUR USE OF MYICE IS ENTIRELY AT YOUR OWN RISK.</p>
+          <div class="ob-divider"></div>
+
+          <h4>10. Age &amp; Eligibility</h4>
+          <p>By using MyICE you confirm you are at least 18 years of age, or are a parent/legal guardian entering information on behalf of a minor. You agree to use the app only for lawful purposes and in accordance with these terms.</p>
+
+        </div>
+
+        <div class="ob-check-row">
+          <input type="checkbox" id="ob-agree-check" onchange="document.getElementById('ob-next-1').disabled=!this.checked">
+          <label for="ob-agree-check">I have read and understand all of the above. I accept that MyICE is not medical advice, all transactions are final with no refunds, data may be lost at any time, and the service may shut down permanently without notice. I use this app entirely at my own risk.</label>
+        </div>
+      </div>
+      <div class="ob-footer">
+        <div class="ob-progress"><div class="ob-dot done"></div><div class="ob-dot"></div></div>
+        <button class="btn btn-primary" id="ob-next-1" disabled onclick="obGoStep(2)" style="padding:10px 28px;font-size:15px">Next →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: CHOOSE TIER -->
+    <div class="ob-step" id="ob-step-2">
+      <div class="ob-body">
+        <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;line-height:1.6">Choose how you want to use MyICE. You can always upgrade later in Settings.</p>
+        <div class="ob-tier-grid">
+
+          <div class="ob-tier-card" id="tier-guest" onclick="selectObTier('guest')">
+            <div class="ob-tier-icon">👀</div>
+            <div class="ob-tier-name">Guest</div>
+            <div class="ob-tier-price">Free</div>
+            <ul class="ob-tier-features">
+              <li>All 22 sections</li>
+              <li>Emergency ID view</li>
+              <li class="no">No account needed</li>
+              <li class="no">Data on this device only</li>
+              <li class="no">Lost if cache cleared</li>
+              <li class="no">No AI features</li>
+            </ul>
+          </div>
+
+          <div class="ob-tier-card" id="tier-free" onclick="selectObTier('free')">
+            <div class="ob-tier-icon">🔑</div>
+            <div class="ob-tier-name">Free Account</div>
+            <div class="ob-tier-price">Free Forever</div>
+            <ul class="ob-tier-features">
+              <li>All 22 sections</li>
+              <li>Emergency ID view</li>
+              <li>Username + password</li>
+              <li>Manual emergency backup to blockchain</li>
+              <li>Survives cache clears</li>
+              <li class="no">No AI features</li>
+            </ul>
+          </div>
+
+          <div class="ob-tier-card" id="tier-premium" onclick="selectObTier('premium')">
+            <div class="ob-tier-icon">⭐</div>
+            <div class="ob-tier-name">Premium</div>
+            <div class="ob-tier-price">$3 / month in LCAI</div>
+            <ul class="ob-tier-features">
+              <li>Everything in Free</li>
+              <li>Auto-sync all data to blockchain</li>
+              <li>Cross-device access</li>
+              <li>AI lab analysis</li>
+              <li>Drug interaction checker</li>
+              <li>AI health assistant</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+      <div class="ob-footer">
+        <div style="display:flex;align-items:center;gap:12px">
+          <button class="btn btn-secondary" onclick="obGoStep(1)" style="padding:8px 18px">← Back</button>
+          <div class="ob-progress"><div class="ob-dot done"></div><div class="ob-dot done"></div></div>
+        </div>
+        <button class="btn btn-primary" id="ob-next-2" disabled onclick="obFinish()" style="padding:10px 28px;font-size:15px">Get Started →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ═══════════════════ PIN MODAL ═══════════════════ -->
 <div id="pin-modal">
@@ -3164,7 +3326,41 @@ function init() {
   });
 }
 
-window.addEventListener('DOMContentLoaded', () => { init(); initAccount(); });
+// ── ONBOARDING ──────────────────────────────────────────────────────────────
+let _obSelectedTier = null;
+
+function checkOnboarding() {
+  if(!localStorage.getItem('myice_onboarded')) {
+    document.getElementById('onboarding-overlay').classList.add('visible');
+  }
+}
+
+function obGoStep(n) {
+  document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+  document.getElementById('ob-step-' + n).classList.add('active');
+}
+
+function selectObTier(tier) {
+  _obSelectedTier = tier;
+  ['guest','free','premium'].forEach(t => document.getElementById('tier-'+t).classList.remove('selected'));
+  document.getElementById('tier-'+tier).classList.add('selected');
+  document.getElementById('ob-next-2').disabled = false;
+}
+
+function obFinish() {
+  localStorage.setItem('myice_onboarded', '1');
+  localStorage.setItem('myice_tier', _obSelectedTier || 'guest');
+  document.getElementById('onboarding-overlay').classList.remove('visible');
+  if(_obSelectedTier === 'free' || _obSelectedTier === 'premium') {
+    // Open account creation modal on the create tab
+    setTimeout(() => {
+      switchAcctTab('create');
+      openAcctModal();
+    }, 300);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => { init(); initAccount(); checkOnboarding(); });
 
 // keyboard PIN entry
 document.addEventListener('keydown', e=>{
