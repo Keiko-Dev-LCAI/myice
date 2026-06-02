@@ -422,7 +422,7 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
-      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;display:none">🔐 <span id="acct-header-label">Login</span></button>
+      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px">🔐 <span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
@@ -3546,10 +3546,17 @@ function updateAcctHeaderBtn() {
   const label = document.getElementById('acct-header-label');
   const acct  = getAccount();
   if(!btn) return;
-  if(!acct) { btn.style.display = 'none'; return; }
   btn.style.display = 'flex';
-  label.textContent = _sessionLoggedIn ? `${acct.username}` : 'Login';
-  btn.title = _sessionLoggedIn ? 'Account settings' : 'Login to your account';
+  if(!acct) {
+    label.textContent = 'Login';
+    btn.title = 'Create account or login';
+  } else if(_sessionLoggedIn) {
+    label.textContent = acct.username;
+    btn.title = 'Account settings';
+  } else {
+    label.textContent = 'Login';
+    btn.title = 'Login to your account';
+  }
 }
 
 function renderAcctSettings() {
