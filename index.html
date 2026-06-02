@@ -258,10 +258,23 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   .logo-sub{display:none}
   .form-row{flex-direction:column;gap:10px}
   .form-group{min-width:unset}
+  /* Emergency button — always fully visible on mobile */
+  .btn-emergency-header{padding:10px 14px;font-size:14px;gap:5px;letter-spacing:0;flex-shrink:0}
+  .btn-emergency-header .emerg-label{display:none}
+  .btn-emergency-header .emerg-short{display:inline}
 }
 @media(max-width:480px){
   .stat-grid{grid-template-columns:1fr 1fr}
   .em-info-grid{grid-template-columns:1fr}
+  /* On very small screens, make the header 2 rows so emergency button never gets cut */
+  :root{--header-height:114px}
+  .app-header{flex-wrap:wrap;height:auto;padding:8px 12px;gap:6px}
+  .header-left{width:100%}
+  .header-right{width:100%}
+  .btn-emergency-header{width:100%;justify-content:center;padding:13px;font-size:17px;border-radius:10px}
+  .btn-emergency-header .emerg-label{display:inline}
+  .btn-emergency-header .emerg-short{display:none}
+  .profile-switcher-btn{flex:1}
 }
 </style>
 </head>
@@ -332,7 +345,7 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="showSection('family')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
-      <button class="btn-emergency-header" onclick="showEmergency()">🚨 EMERGENCY</button>
+      <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
 
