@@ -47,13 +47,13 @@ a{color:inherit;text-decoration:none}
 
 /* ── SIDEBAR ── */
 .sidebar{width:var(--sidebar-width);background:var(--bg-secondary);border-right:1px solid var(--border);overflow-y:auto;height:calc(100vh - var(--header-height));position:sticky;top:var(--header-height);flex-shrink:0;transition:transform 0.3s}
-.sidebar-section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:20px 18px 8px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:13px 18px;color:var(--text-secondary);cursor:pointer;font-size:16px;transition:all 0.12s;border-left:3px solid transparent;user-select:none}
+.sidebar-section-label{font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:20px 18px 8px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 18px;color:var(--text-secondary);cursor:pointer;font-size:32px;transition:all 0.12s;border-left:3px solid transparent;user-select:none}
 .nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
 .nav-item.active{background:var(--accent-dim);color:var(--accent);border-left-color:var(--accent);font-weight:600}
-.nav-item.nav-emergency{color:var(--emergency);font-weight:700;font-size:17px}
+.nav-item.nav-emergency{color:var(--emergency);font-weight:700;font-size:34px}
 .nav-item.nav-emergency:hover,.nav-item.nav-emergency.active{background:var(--emergency-dim);border-left-color:var(--emergency)}
-.nav-icon{font-size:20px;width:26px;text-align:center;flex-shrink:0}
+.nav-icon{font-size:40px;width:48px;text-align:center;flex-shrink:0}
 
 /* ── MAIN CONTENT ── */
 .main-content{flex:1;padding:32px 36px;overflow-y:auto;min-width:0}
@@ -61,24 +61,24 @@ a{color:inherit;text-decoration:none}
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
 /* ── SECTION HEADER ── */
-.section-title{font-size:26px;font-weight:800;color:var(--text-primary);margin-bottom:26px;display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--border)}
-.section-title .title-icon{font-size:30px}
-.section-subtitle{font-size:15px;color:var(--text-muted);font-weight:400;margin-left:4px}
+.section-title{font-size:52px;font-weight:800;color:var(--text-primary);margin-bottom:26px;display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.section-title .title-icon{font-size:60px}
+.section-subtitle{font-size:30px;color:var(--text-muted);font-weight:400;margin-left:4px}
 
 /* ── CARDS ── */
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
-.card-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
+.card-title{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
 .card + .card{margin-top:0}
 
 /* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:6px;font-size:15px;font-weight:500;cursor:pointer;border:none;transition:all 0.12s;white-space:nowrap;font-family:inherit}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:6px;font-size:30px;font-weight:500;cursor:pointer;border:none;transition:all 0.12s;white-space:nowrap;font-family:inherit}
 .btn-primary{background:var(--accent);color:#000;font-weight:700}
 .btn-primary:hover{background:#00caee;transform:translateY(-1px)}
 .btn-secondary{background:var(--bg-hover);color:var(--text-primary);border:1px solid var(--border)}
 .btn-secondary:hover{background:var(--border)}
 .btn-danger{background:var(--emergency);color:#fff;font-weight:600}
 .btn-danger:hover{background:#ff4252}
-.btn-sm{padding:5px 10px;font-size:12px}
+.btn-sm{padding:5px 10px;font-size:24px}
 .btn-icon{background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:15px;padding:5px 7px;border-radius:4px;transition:all 0.12s;font-family:inherit}
 .btn-icon:hover{color:var(--text-primary);background:var(--bg-hover)}
 .btn-icon.danger:hover{color:var(--emergency)}
@@ -87,8 +87,8 @@ a{color:inherit;text-decoration:none}
 /* ── FORMS ── */
 .form-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
 .form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:130px}
-.form-group label{font-size:12px;font-weight:600;color:var(--text-secondary)}
-.input,.select,.textarea{background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:16px;padding:11px 14px;transition:border-color 0.12s;width:100%;font-family:inherit}
+.form-group label{font-size:24px;font-weight:600;color:var(--text-secondary)}
+.input,.select,.textarea{background:var(--bg-primary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:32px;padding:11px 14px;transition:border-color 0.12s;width:100%;font-family:inherit}
 .input:focus,.select:focus,.textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,180,216,0.1)}
 /* Fix browser autofill overriding dark theme */
 input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus,
@@ -153,14 +153,14 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;margin-bottom:24px}
 .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.12s}
 .stat-card:hover{border-color:rgba(0,180,216,0.4)}
-.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;font-weight:700}
-.stat-value{font-size:24px;font-weight:800}
+.stat-label{font-size:22px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;font-weight:700}
+.stat-value{font-size:48px;font-weight:800}
 .stat-value.teal{color:var(--accent)}
 .stat-value.red{color:var(--emergency)}
 .stat-value.orange{color:var(--warning)}
 .stat-value.green{color:var(--success)}
 .stat-value.gray{color:var(--text-muted)}
-.stat-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.stat-sub{font-size:24px;color:var(--text-muted);margin-top:4px}
 
 /* ── TIMELINE ── */
 .timeline{padding-left:20px;border-left:2px solid var(--border);margin-top:8px}
