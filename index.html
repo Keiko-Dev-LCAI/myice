@@ -267,6 +267,30 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   .stat-grid{grid-template-columns:1fr 1fr}
   .em-info-grid{grid-template-columns:1fr}
 }
+
+/* ── ACCOUNT MODAL ── */
+.acct-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;align-items:center;justify-content:center;padding:16px}
+.acct-overlay.visible{display:flex}
+.acct-dialog{background:var(--bg-card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:440px;padding:32px;position:relative}
+.acct-dialog h2{font-size:22px;font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.acct-dialog p{font-size:14px;color:var(--text-secondary);margin-bottom:24px;line-height:1.5}
+.acct-tabs{display:flex;gap:0;background:var(--bg-secondary);border-radius:8px;padding:3px;margin-bottom:24px}
+.acct-tab{flex:1;padding:8px;border:none;background:none;color:var(--text-secondary);border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;transition:all 0.15s;font-family:inherit}
+.acct-tab.active{background:var(--bg-card);color:var(--text-primary);box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.acct-field{margin-bottom:16px}
+.acct-field label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:6px}
+.acct-hint{font-size:11px;color:var(--text-muted);margin-top:4px}
+.acct-strength{height:4px;border-radius:2px;margin-top:6px;transition:all 0.3s;background:var(--border)}
+.acct-error{font-size:13px;color:var(--emergency);min-height:18px;margin-bottom:12px}
+.acct-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;padding:4px;border-radius:4px}
+.acct-close:hover{color:var(--text-primary)}
+.bio-btn{width:100%;padding:14px;background:var(--bg-secondary);border:2px dashed var(--border);border-radius:10px;color:var(--text-secondary);font-size:16px;cursor:pointer;transition:all 0.15s;font-family:inherit;font-weight:600}
+.bio-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bio-btn.enrolled{border-style:solid;border-color:var(--success);color:var(--success)}
+.sync-btn{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);padding:8px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:6px}
+.sync-btn:hover{background:rgba(0,180,216,0.2)}
+.sync-status{font-size:11px;color:var(--text-muted);margin-top:4px}
+.chain-badge{font-size:11px;background:rgba(46,160,67,0.15);color:var(--success);border:1px solid rgba(46,160,67,0.3);border-radius:10px;padding:2px 8px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
 </style>
 </head>
 <body>
@@ -304,6 +328,61 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   </div>
 </div>
 
+<!-- ═══════════════════ ACCOUNT MODAL ═══════════════════ -->
+<div class="acct-overlay" id="acct-overlay">
+  <div class="acct-dialog">
+    <button class="acct-close" onclick="closeAcctModal()">✕</button>
+    <h2>🔐 <span id="acct-modal-title">My Account</span></h2>
+    <p id="acct-modal-desc">Secure your health data with a password account. Enables cloud backup and cross-device access (Premium).</p>
+
+    <!-- tabs: login / create -->
+    <div class="acct-tabs" id="acct-tabs">
+      <button class="acct-tab active" onclick="switchAcctTab('login')">Login</button>
+      <button class="acct-tab" onclick="switchAcctTab('create')">Create Account</button>
+    </div>
+
+    <!-- LOGIN panel -->
+    <div id="acct-panel-login">
+      <div class="acct-field">
+        <label>Username</label>
+        <input class="input" id="acct-login-user" type="text" placeholder="Your username" autocomplete="username">
+      </div>
+      <div class="acct-field">
+        <label>Password</label>
+        <input class="input" id="acct-login-pass" type="password" placeholder="Your password" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()">
+      </div>
+      <div class="acct-error" id="acct-login-error"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:12px" onclick="doLogin()">🔓 Login</button>
+      <button class="bio-btn" id="bio-login-btn" onclick="doBiometricLogin()" style="display:none">👆 Use Fingerprint / Face ID</button>
+    </div>
+
+    <!-- CREATE panel -->
+    <div id="acct-panel-create" style="display:none">
+      <div class="acct-field">
+        <label>Choose a username</label>
+        <input class="input" id="acct-new-user" type="text" placeholder="e.g. janedoe2024" autocomplete="username">
+        <div class="acct-hint">This is your account name — write it down.</div>
+      </div>
+      <div class="acct-field">
+        <label>Create a password</label>
+        <input class="input" id="acct-new-pass" type="password" placeholder="At least 10 characters" autocomplete="new-password"
+          oninput="checkPassStrength(this.value)">
+        <div class="acct-strength" id="pass-strength-bar"></div>
+        <div class="acct-hint" id="pass-strength-text">Use letters, numbers, and symbols for a strong password.</div>
+      </div>
+      <div class="acct-field">
+        <label>Confirm password</label>
+        <input class="input" id="acct-confirm-pass" type="password" placeholder="Repeat password" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') doCreateAccount()">
+      </div>
+      <div class="acct-error" id="acct-create-error"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doCreateAccount()">✅ Create Account</button>
+    </div>
+
+  </div>
+</div>
+
 <!-- ═══════════════════ EMERGENCY OVERLAY ═══════════════════ -->
 <div id="emergency-overlay">
   <div class="em-header">
@@ -336,6 +415,7 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="showSection('family')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
+      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;display:none">🔐 <span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
@@ -1364,6 +1444,14 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
       🔓 The Emergency View is <strong style="color:var(--text-secondary)">always accessible</strong> without a PIN — it's designed for first responders.
     </div>
   </div>
+  <!-- ── ACCOUNT & CLOUD SYNC ── -->
+  <div class="card" id="acct-settings-card">
+    <div class="card-title">🔐 Account & Cloud Sync</div>
+    <div id="acct-settings-content">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">⭐ Subscription</div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -3017,7 +3105,7 @@ function init() {
   });
 }
 
-window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('DOMContentLoaded', () => { init(); initAccount(); });
 
 // keyboard PIN entry
 document.addEventListener('keydown', e=>{
@@ -3026,6 +3114,457 @@ document.addEventListener('keydown', e=>{
   else if(e.key==='Backspace') pinPress('del');
   else if(e.key==='Escape') pinSkip();
 });
+
+// ════════════════════════════════════════════════════════════════════════
+// ACCOUNT SYSTEM — username+password login, biometrics, on-chain sync
+// ════════════════════════════════════════════════════════════════════════
+
+const ACCT_KEY   = 'myice_account';          // localStorage key for account info
+const STORE_ADDR = '0x2902Ff4e773E3dEB8C193d77442CE22e7d96299a';
+
+// Current session key material (cleared on page unload)
+let _sessionKey    = null;   // CryptoKey (AES-GCM) for encrypting private data
+let _sessionAddr   = null;   // derived Ethereum address (on-chain identifier)
+let _sessionLoggedIn = false;
+
+// ── Key Derivation ─────────────────────────────────────────────────────────────
+
+async function deriveKeyMaterial(password, username) {
+  const enc = new TextEncoder();
+  const keyMat = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits','deriveKey']);
+  return { keyMat, salt: enc.encode('myice_v1_' + username.toLowerCase()) };
+}
+
+async function deriveAESKey(password, username) {
+  const { keyMat, salt } = await deriveKeyMaterial(password, username);
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' },
+    keyMat, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+  );
+}
+
+async function deriveAddressBytes(password, username) {
+  const { keyMat, salt } = await deriveKeyMaterial(password, username);
+  // derive 32 bytes as the "private key" seed
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt: new TextEncoder().encode('myice_addr_' + username.toLowerCase()), iterations:100000, hash:'SHA-256' },
+    keyMat, 256
+  );
+  return new Uint8Array(bits);
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Compute Ethereum address from 32-byte seed (keccak256 of uncompressed public key)
+// We use a simplified derivation: sha256(seed) → use as address for on-chain lookup
+// (full secp256k1 requires a library; this deterministic hash serves the same purpose)
+async function deriveOnChainAddress(password, username) {
+  const seedBytes = await deriveAddressBytes(password, username);
+  // Hash the seed to produce a stable 20-byte "address"
+  const hash = await crypto.subtle.digest('SHA-256', seedBytes);
+  const hex  = bytesToHex(new Uint8Array(hash));
+  return '0x' + hex.slice(0, 40); // use first 20 bytes as address
+}
+
+// ── Encryption ────────────────────────────────────────────────────────────────
+
+async function encryptData(aesKey, plaintext) {
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder().encode(typeof plaintext === 'string' ? plaintext : JSON.stringify(plaintext));
+  const ct  = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, aesKey, enc);
+  // pack: iv(12) + ciphertext
+  const out = new Uint8Array(12 + ct.byteLength);
+  out.set(iv, 0); out.set(new Uint8Array(ct), 12);
+  return bytesToHex(out);
+}
+
+async function decryptData(aesKey, hexCipher) {
+  const bytes = Uint8Array.from(hexCipher.replace('0x','').match(/.{2}/g).map(h=>parseInt(h,16)));
+  const iv = bytes.slice(0,12);
+  const ct = bytes.slice(12);
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, aesKey, ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+// ── Account Storage ───────────────────────────────────────────────────────────
+
+function getAccount() {
+  try { const v = localStorage.getItem(ACCT_KEY); return v ? JSON.parse(v) : null; }
+  catch(e) { return null; }
+}
+function saveAccount(a) { localStorage.setItem(ACCT_KEY, JSON.stringify(a)); }
+function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; updateAcctHeaderBtn(); }
+window.addEventListener('beforeunload', clearSession);
+
+// ── Password Strength ─────────────────────────────────────────────────────────
+
+function checkPassStrength(pw) {
+  const bar  = document.getElementById('pass-strength-bar');
+  const text = document.getElementById('pass-strength-text');
+  if(!bar) return;
+  let score = 0;
+  if(pw.length >= 8)  score++;
+  if(pw.length >= 12) score++;
+  if(/[A-Z]/.test(pw)) score++;
+  if(/[0-9]/.test(pw)) score++;
+  if(/[^A-Za-z0-9]/.test(pw)) score++;
+  const colors = ['#E63946','#f77f00','#f7c948','#2ea043','#00B4D8'];
+  const labels = ['Too short','Weak','Fair','Strong','Very strong'];
+  bar.style.width   = (score*20) + '%';
+  bar.style.background = colors[Math.max(0,score-1)] || colors[0];
+  text.textContent  = pw.length ? labels[Math.max(0,score-1)] : 'Use letters, numbers, and symbols.';
+  return score;
+}
+
+// ── Create Account ────────────────────────────────────────────────────────────
+
+async function doCreateAccount() {
+  const username = document.getElementById('acct-new-user').value.trim();
+  const password = document.getElementById('acct-new-pass').value;
+  const confirm  = document.getElementById('acct-confirm-pass').value;
+  const errEl    = document.getElementById('acct-create-error');
+  errEl.textContent = '';
+
+  if(!username) { errEl.textContent = 'Username is required.'; return; }
+  if(username.length < 3) { errEl.textContent = 'Username must be at least 3 characters.'; return; }
+  if(password.length < 10) { errEl.textContent = 'Password must be at least 10 characters.'; return; }
+  if(checkPassStrength(password) < 2) { errEl.textContent = 'Please choose a stronger password.'; return; }
+  if(password !== confirm) { errEl.textContent = 'Passwords do not match.'; return; }
+
+  try {
+    errEl.textContent = 'Creating account…';
+    const aesKey = await deriveAESKey(password, username);
+    const address = await deriveOnChainAddress(password, username);
+
+    // Hash the password for local verification (never store the password itself)
+    const passHash = bytesToHex(new Uint8Array(
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode('myice_verify_' + password + username))
+    ));
+
+    saveAccount({ username, address, passHash, hasBiometric: false, createdAt: Date.now() });
+    _sessionKey = aesKey;
+    _sessionAddr = address;
+    _sessionLoggedIn = true;
+
+    errEl.textContent = '';
+    closeAcctModal();
+    updateAcctHeaderBtn();
+    loadSettingsPage();
+    showToast('✅ Account created! Your health data is now secured.');
+
+    // Offer biometric setup
+    if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+  } catch(e) {
+    errEl.textContent = 'Error creating account. Please try again.';
+    console.error(e);
+  }
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+
+async function doLogin() {
+  const username = document.getElementById('acct-login-user').value.trim();
+  const password = document.getElementById('acct-login-pass').value;
+  const errEl    = document.getElementById('acct-login-error');
+  errEl.textContent = '';
+
+  if(!username || !password) { errEl.textContent = 'Enter username and password.'; return; }
+
+  const acct = getAccount();
+  if(!acct) { errEl.textContent = 'No account found. Create one first.'; return; }
+  if(acct.username.toLowerCase() !== username.toLowerCase()) {
+    errEl.textContent = 'Username not found.'; return;
+  }
+
+  // Verify password via hash
+  const passHash = bytesToHex(new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode('myice_verify_' + password + acct.username))
+  ));
+  if(passHash !== acct.passHash) { errEl.textContent = 'Incorrect password.'; return; }
+
+  try {
+    _sessionKey = await deriveAESKey(password, acct.username);
+    _sessionAddr = acct.address;
+    _sessionLoggedIn = true;
+    closeAcctModal();
+    updateAcctHeaderBtn();
+    loadSettingsPage();
+    showToast('🔓 Logged in successfully.');
+  } catch(e) {
+    errEl.textContent = 'Login failed. Please try again.';
+  }
+}
+
+function doLogout() {
+  clearSession();
+  loadSettingsPage();
+  showToast('Logged out.');
+}
+
+// ── Biometrics (WebAuthn) ─────────────────────────────────────────────────────
+
+async function setupBiometric() {
+  const acct = getAccount();
+  if(!acct) { showToast('Create an account first.'); return; }
+  if(!_sessionLoggedIn) { showToast('Log in first, then set up biometrics.'); return; }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge:  crypto.getRandomValues(new Uint8Array(32)),
+      rp:         { name: 'MyICE Health Vault', id: location.hostname },
+      user:       { id: new TextEncoder().encode(acct.username), name: acct.username, displayName: acct.username },
+      pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
+      authenticatorSelection: { userVerification:'required' },
+      timeout:    60000,
+    }});
+    const credId = bytesToHex(new Uint8Array(cred.rawId));
+    acct.hasBiometric = true;
+    acct.credentialId = credId;
+    saveAccount(acct);
+    loadSettingsPage();
+    showToast('👆 Biometric login enabled!');
+  } catch(e) {
+    showToast('Biometric setup failed: ' + e.message);
+  }
+}
+
+async function doBiometricLogin() {
+  const acct = getAccount();
+  if(!acct || !acct.credentialId) { showToast('No biometric enrolled.'); return; }
+  try {
+    const credIdBytes = Uint8Array.from(acct.credentialId.match(/.{2}/g).map(h=>parseInt(h,16)));
+    await navigator.credentials.get({ publicKey: {
+      challenge:  crypto.getRandomValues(new Uint8Array(32)),
+      rpId:       location.hostname,
+      allowCredentials: [{ type:'public-key', id: credIdBytes }],
+      userVerification: 'required',
+      timeout: 60000,
+    }});
+    // Biometric verified — but we still need the AES key (derived from password)
+    // We can't get the AES key from biometrics alone — prompt for password once after biometric
+    // In production: store encrypted AES key in WebAuthn PRF extension
+    // For v1: biometric proves identity, then ask for password to unlock session
+    document.getElementById('acct-login-user').value = acct.username;
+    closeAcctModal();
+    showToast('👆 Identity verified! Enter your password to unlock data.');
+    openAcctModal();
+    document.getElementById('acct-login-pass').focus();
+  } catch(e) {
+    showToast('Biometric login failed. Use your password instead.');
+  }
+}
+
+function offerBiometricSetup() {
+  if(!window.PublicKeyCredential) return;
+  const acct = getAccount();
+  if(!acct || acct.hasBiometric) return;
+  if(confirm('Set up fingerprint / Face ID for quick login? (Recommended)')) setupBiometric();
+}
+
+// ── On-Chain Sync (Premium) ────────────────────────────────────────────────────
+
+function buildEmergencyPayload() {
+  // Collect emergency-visible data (same fields shown in emergency view)
+  const profile    = gd('profile', {});
+  const conditions = gd('conditions', []).filter(c => c.emergencyVisible !== false);
+  const medications= gd('medications',[]).filter(m => m.emergencyVisible !== false);
+  const allergies  = gd('allergies',  []).filter(a => a.emergencyVisible !== false);
+  const contacts   = gd('emergency_contacts', []);
+  const dnr        = gd('dnr', {});
+  return JSON.stringify({
+    name:        profile.visName  !== false ? profile.name       : undefined,
+    dob:         profile.visDob   !== false ? profile.dob        : undefined,
+    bloodType:   profile.visBlood !== false ? profile.bloodType  : undefined,
+    organDonor:  profile.visOrgan !== false ? profile.organDonor : undefined,
+    conditions, medications, allergies, contacts, dnr,
+    syncedAt: Date.now()
+  });
+}
+
+function buildPrivatePayload() {
+  // Collect all health data for encrypted cloud backup
+  const keys = ['profile','conditions','medications','allergies','vitals','lab_results',
+                 'documents','appointments','care_team','emergency_contacts','billing',
+                 'history','vaccinations','vision','devices','symptoms','goals','family_profiles'];
+  const data = {};
+  keys.forEach(k => { const v = localStorage.getItem(pk(k)); if(v) data[k] = v; });
+  data.settings = localStorage.getItem(`${STORAGE_PREFIX}settings`);
+  return JSON.stringify(data);
+}
+
+async function syncToChain() {
+  if(!_sessionLoggedIn || !_sessionKey || !_sessionAddr) {
+    showToast('Log in first to sync.'); return;
+  }
+  const btn = document.getElementById('sync-chain-btn');
+  if(btn) { btn.textContent = '⏳ Syncing…'; btn.disabled = true; }
+
+  try {
+    // Build payloads
+    const emergencyJSON = buildEmergencyPayload();
+    const privateJSON   = buildPrivatePayload();
+    const encPrivate    = await encryptData(_sessionKey, privateJSON);
+
+    // Convert to hex
+    const toHex = s => Array.from(new TextEncoder().encode(s)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    const emergencyHex = toHex(emergencyJSON);
+
+    const resp = await fetch(`${BACKEND}/api/store-health`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        address:      _sessionAddr,
+        emergencyData: emergencyHex,
+        privateData:   encPrivate
+      })
+    });
+    const result = await resp.json();
+    if(result.success) {
+      const acct = getAccount();
+      if(acct) { acct.lastSynced = Date.now(); saveAccount(acct); }
+      showToast('✅ Health data synced to Lightchain!');
+      loadSettingsPage();
+    } else {
+      showToast('Sync failed: ' + (result.error || 'Unknown error'));
+    }
+  } catch(e) {
+    showToast('Sync error: ' + e.message);
+  } finally {
+    if(btn) { btn.textContent = '☁️ Sync to Chain'; btn.disabled = false; }
+  }
+}
+
+async function loadFromChain() {
+  // Called on startup if no local data but account address known
+  const acct = getAccount();
+  if(!acct) return;
+  try {
+    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(acct.address)}`);
+    const data = await resp.json();
+    if(!data.hasRecord) return;
+    // Store chain-synced emergency data in localStorage for offline access
+    if(data.emergencyData && data.emergencyData.length > 2) {
+      const hex = data.emergencyData.replace('0x','');
+      const bytes = Uint8Array.from(hex.match(/.{2}/g).map(h=>parseInt(h,16)));
+      const text = new TextDecoder().decode(bytes);
+      const em = JSON.parse(text);
+      // Populate localStorage from chain data if profile is empty
+      const profile = gd('profile', {});
+      if(!profile.name && em.name) {
+        Object.assign(profile, { name:em.name, dob:em.dob, bloodType:em.bloodType, organDonor:em.organDonor });
+        sd('profile', profile);
+      }
+    }
+  } catch(e) {
+    console.log('[chain load] error:', e.message);
+  }
+}
+
+// ── UI Helpers ────────────────────────────────────────────────────────────────
+
+function openAcctModal() {
+  const acct = getAccount();
+  const overlay = document.getElementById('acct-overlay');
+  // Show biometric button if enrolled
+  const bioBtn = document.getElementById('bio-login-btn');
+  if(bioBtn && acct && acct.hasBiometric && window.PublicKeyCredential) {
+    bioBtn.style.display = 'block';
+    document.getElementById('acct-login-user').value = acct.username || '';
+  }
+  overlay.classList.add('visible');
+}
+function closeAcctModal() { document.getElementById('acct-overlay').classList.remove('visible'); }
+
+function switchAcctTab(tab) {
+  document.getElementById('acct-panel-login').style.display  = tab==='login'  ? 'block' : 'none';
+  document.getElementById('acct-panel-create').style.display = tab==='create' ? 'block' : 'none';
+  document.querySelectorAll('.acct-tab').forEach((t,i)=>t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='create')));
+}
+
+function updateAcctHeaderBtn() {
+  const btn   = document.getElementById('acct-header-btn');
+  const label = document.getElementById('acct-header-label');
+  const acct  = getAccount();
+  if(!btn) return;
+  if(!acct) { btn.style.display = 'none'; return; }
+  btn.style.display = 'flex';
+  label.textContent = _sessionLoggedIn ? `${acct.username}` : 'Login';
+  btn.title = _sessionLoggedIn ? 'Account settings' : 'Login to your account';
+}
+
+function renderAcctSettings() {
+  const el   = document.getElementById('acct-settings-content');
+  if(!el) return;
+  const acct = getAccount();
+  const premium = isPremium();
+
+  if(!acct) {
+    el.innerHTML = `
+      <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
+        Create a secure account to enable cloud backup and cross-device access (Premium feature).
+        Your data is encrypted with your password before leaving your device.
+      </p>
+      <button class="btn btn-primary" onclick="openAcctModal()">🔐 Create Account / Login</button>`;
+    return;
+  }
+
+  const lastSync = acct.lastSynced ? new Date(acct.lastSynced).toLocaleString() : 'Never';
+  const syncedHtml = premium
+    ? `<div style="margin-top:16px">
+        <button class="sync-btn" id="sync-chain-btn" onclick="syncToChain()">☁️ Sync to Chain</button>
+        <div class="sync-status">Last synced: ${lastSync}</div>
+        ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
+       </div>`
+    : `<div style="margin-top:14px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:13px;color:var(--text-muted)">
+        ⭐ <strong>Premium</strong> — Cloud sync (cross-device backup) requires Premium ($3/month).
+       </div>`;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div style="font-size:16px;font-weight:700">👤 ${esc(acct.username)}</div>
+      ${_sessionLoggedIn ? '<span class="chain-badge">🔓 Logged in</span>' : '<span style="font-size:12px;color:var(--text-muted)">Session locked</span>'}
+    </div>
+    ${_sessionLoggedIn
+      ? `<div style="display:flex;gap:10px;flex-wrap:wrap">
+           <button class="btn btn-secondary" onclick="doLogout()">🔒 Lock Session</button>
+           ${acct.hasBiometric
+             ? '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Re-enroll Biometrics</button>'
+             : '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Set Up Fingerprint/Face ID</button>'}
+         </div>`
+      : `<button class="btn btn-primary" onclick="openAcctModal()">🔓 Unlock Session</button>`}
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">
+      On-chain address: <code style="font-size:11px">${acct.address}</code>
+    </div>
+    ${syncedHtml}`;
+}
+
+function initAccount() {
+  updateAcctHeaderBtn();
+  // Try loading emergency data from chain on startup (non-blocking)
+  setTimeout(loadFromChain, 2000);
+}
+
+// Override loadSettingsPage to also render account settings
+const _origLoadSettings = loadSettingsPage;
+function loadSettingsPage() {
+  _origLoadSettings();
+  renderAcctSettings();
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast-msg');
+  if(!t) {
+    t = document.createElement('div');
+    t.id = 'toast-msg';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);padding:12px 22px;border-radius:10px;font-size:14px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:opacity 0.3s;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+}
 </script>
 </body>
 </html>
