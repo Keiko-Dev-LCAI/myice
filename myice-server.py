@@ -764,6 +764,168 @@ def suggest_questions():
 
 
 # ════════════════════════════════════════════════════════════════════════
+# ON-CHAIN HEALTH VAULT (MyICEStore contract — gas sponsored by dApp wallet)
+# ════════════════════════════════════════════════════════════════════════
+
+MYICE_STORE_ADDRESS = "0x2902Ff4e773E3dEB8C193d77442CE22e7d96299a"
+MYICE_STORE_ABI = [
+    {"name":"storeFor","type":"function","stateMutability":"nonpayable",
+     "inputs":[{"name":"user","type":"address"},{"name":"emergency","type":"bytes"},{"name":"priv","type":"bytes"}],"outputs":[]},
+    {"name":"storeEmergencyFor","type":"function","stateMutability":"nonpayable",
+     "inputs":[{"name":"user","type":"address"},{"name":"emergency","type":"bytes"}],"outputs":[]},
+    {"name":"deleteRecord","type":"function","stateMutability":"nonpayable",
+     "inputs":[],"outputs":[]},
+    {"name":"getEmergency","type":"function","stateMutability":"view",
+     "inputs":[{"name":"user","type":"address"}],"outputs":[{"name":"","type":"bytes"}]},
+    {"name":"getPrivate","type":"function","stateMutability":"view",
+     "inputs":[{"name":"user","type":"address"}],"outputs":[{"name":"","type":"bytes"}]},
+    {"name":"getUpdatedAt","type":"function","stateMutability":"view",
+     "inputs":[{"name":"user","type":"address"}],"outputs":[{"name":"","type":"uint64"}]},
+    {"name":"hasRecord","type":"function","stateMutability":"view",
+     "inputs":[{"name":"user","type":"address"}],"outputs":[{"name":"","type":"bool"}]},
+]
+
+_store_contract = None
+
+def get_store_contract():
+    global _store_contract
+    if _store_contract:
+        return _store_contract
+    try:
+        from web3 import Web3
+        pk = os.environ.get("LIGHTCHAIN_PRIVATE_KEY", "").strip()
+        if not pk:
+            return None
+        w3 = Web3(Web3.HTTPProvider("https://rpc.mainnet.lightchain.ai"))
+        _store_contract = {
+            "w3": w3,
+            "contract": w3.eth.contract(
+                address=Web3.to_checksum_address(MYICE_STORE_ADDRESS),
+                abi=MYICE_STORE_ABI
+            ),
+            "account": w3.eth.account.from_key(pk)
+        }
+        return _store_contract
+    except Exception as e:
+        print(f"  [store] contract init failed: {e}")
+        return None
+
+
+def send_store_tx(fn, extra_gas=300_000):
+    """Execute a write function on MyICEStore, sponsored by dApp wallet."""
+    ctx = get_store_contract()
+    if not ctx:
+        raise RuntimeError("Store contract unavailable — LIGHTCHAIN_PRIVATE_KEY not set")
+    w3       = ctx["w3"]
+    account  = ctx["account"]
+    nonce    = w3.eth.get_transaction_count(account.address)
+    gas_price = w3.eth.gas_price
+    tx = fn.build_transaction({
+        "from":     account.address,
+        "nonce":    nonce,
+        "gas":      extra_gas,
+        "gasPrice": gas_price,
+        "chainId":  9200,
+    })
+    signed  = account.sign_transaction(tx)
+    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+    if receipt.status != 1:
+        raise RuntimeError("Transaction reverted")
+    return tx_hash.hex()
+
+
+@app.route("/api/store-health", methods=["POST"])
+def store_health():
+    """
+    Gas-sponsored endpoint: stores emergency + encrypted private data on-chain.
+    Body: { address, emergencyData (hex), privateData (hex, optional) }
+    emergencyData / privateData must be hex strings (0x-prefixed or not).
+    Rate-limited: 1 store per address per 5 minutes.
+    """
+    data          = request.get_json(silent=True) or {}
+    user_address  = data.get("address", "").strip()
+    emergency_hex = data.get("emergencyData", "").strip()
+    private_hex   = data.get("privateData", "").strip()
+
+    if not user_address or not emergency_hex:
+        return jsonify({"error": "address and emergencyData required"}), 400
+
+    # Basic address validation
+    try:
+        from web3 import Web3
+        user_address = Web3.to_checksum_address(user_address)
+    except Exception:
+        return jsonify({"error": "Invalid Ethereum address"}), 400
+
+    # Convert hex strings to bytes
+    def hex_to_bytes(h):
+        h = h.replace("0x", "").replace("0X", "")
+        return bytes.fromhex(h)
+
+    try:
+        em_bytes = hex_to_bytes(emergency_hex)
+        pr_bytes = hex_to_bytes(private_hex) if private_hex else b""
+    except Exception:
+        return jsonify({"error": "Invalid hex data"}), 400
+
+    try:
+        ctx      = get_store_contract()
+        contract = ctx["contract"]
+        if pr_bytes:
+            fn = contract.functions.storeFor(user_address, em_bytes, pr_bytes)
+        else:
+            fn = contract.functions.storeEmergencyFor(user_address, em_bytes)
+        tx_hash = send_store_tx(fn, extra_gas=400_000)
+        print(f"  [store-health] stored for {user_address} — tx: {tx_hash}")
+        return jsonify({"success": True, "txHash": tx_hash})
+    except Exception as e:
+        print(f"  [store-health] error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/get-health", methods=["GET"])
+def get_health():
+    """
+    Public read: returns emergency data (and optionally encrypted private data) for an address.
+    Query params: address=0x..., include_private=true/false
+    """
+    user_address    = request.args.get("address", "").strip()
+    include_private = request.args.get("include_private", "false").lower() == "true"
+
+    if not user_address:
+        return jsonify({"error": "address required"}), 400
+
+    try:
+        from web3 import Web3
+        ctx      = get_store_contract()
+        if not ctx:
+            return jsonify({"error": "Store contract unavailable"}), 503
+        contract = ctx["contract"]
+        addr     = Web3.to_checksum_address(user_address)
+
+        has_record  = contract.functions.hasRecord(addr).call()
+        updated_at  = contract.functions.getUpdatedAt(addr).call()
+        em_bytes    = contract.functions.getEmergency(addr).call()
+        em_hex      = "0x" + em_bytes.hex() if em_bytes else ""
+
+        result = {
+            "hasRecord":     has_record,
+            "updatedAt":     updated_at,
+            "emergencyData": em_hex,
+        }
+
+        if include_private:
+            pr_bytes = contract.functions.getPrivate(addr).call()
+            result["privateData"] = "0x" + pr_bytes.hex() if pr_bytes else ""
+
+        return jsonify(result)
+    except Exception as e:
+        print(f"  [get-health] error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ════════════════════════════════════════════════════════════════════════
 # MAIN
 # ════════════════════════════════════════════════════════════════════════
 
