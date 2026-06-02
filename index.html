@@ -569,14 +569,25 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
   <div class="card">
     <div class="card-title">Personal Information</div>
     <div class="form-row">
-      <div class="form-group">
-        <label>Full Name</label>
-        <input class="input" id="prof-name" placeholder="Jane Doe" oninput="saveProfile()">
+      <div class="form-group" style="flex:2">
+        <label>First Name</label>
+        <input class="input" id="prof-first-name" placeholder="Jane" oninput="saveProfile()">
       </div>
+      <div class="form-group" style="flex:0 0 80px">
+        <label>Middle Initial</label>
+        <input class="input" id="prof-middle-name" placeholder="M" maxlength="3" oninput="saveProfile()">
+      </div>
+      <div class="form-group" style="flex:2">
+        <label>Last Name</label>
+        <input class="input" id="prof-last-name" placeholder="Doe" oninput="saveProfile()">
+      </div>
+    </div>
+    <div class="form-row">
       <div class="form-group">
         <label>Date of Birth</label>
         <input class="input" type="date" id="prof-dob" oninput="saveProfile()">
       </div>
+      <div class="form-group" style="flex:2"><!-- spacer --></div>
     </div>
     <div class="form-row">
       <div class="form-group" style="flex:2">
@@ -1415,9 +1426,12 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 ══════════════════════════════════════ -->
 <div class="section" id="section-family">
   <div class="section-title"><span class="title-icon">👨‍👩‍👧</span> Family Profiles</div>
-  <p style="font-size:14px;color:var(--text-secondary);margin-bottom:18px">Each profile has its own complete, separate health record. Switch profiles from the header.</p>
+  <div style="background:var(--accent-dim);border:1px solid rgba(0,180,216,0.25);border-radius:10px;padding:14px 18px;font-size:14px;color:var(--text-secondary);margin-bottom:18px;line-height:1.6">
+    👤 <strong style="color:var(--text-primary)">Your own profile is already set up</strong> — fill in your details under <strong>My Profile</strong> in the sidebar.<br>
+    Use this section to manage health records for other people you care for (spouse, child, parent, etc.). Each gets their own complete, separate record.
+  </div>
   <div class="card">
-    <div class="card-title">Add Family Member</div>
+    <div class="card-title">Add Another Profile</div>
     <div class="form-row">
       <div class="form-group" style="flex:2"><label>Name</label><input class="input" id="fam-name" placeholder="e.g. Jane Smith" onkeydown="if(event.key==='Enter')addFamilyProfile()"></div>
       <div class="form-group"><label>Relationship</label>
@@ -2126,7 +2140,10 @@ function renderDashboard() {
 // ── PROFILE ──
 function loadProfileForm() {
   const p = gd('profile',{});
-  setValue('prof-name',p.name);
+  // Support both old single-name and new split-name fields
+  setValue('prof-first-name', p.firstName || (p.name ? p.name.split(' ')[0] : ''));
+  setValue('prof-middle-name', p.middleInitial || '');
+  setValue('prof-last-name', p.lastName || (p.name ? p.name.split(' ').slice(1).join(' ') : ''));
   setValue('prof-dob',p.dob);
   setValue('prof-address',p.address);
   setValue('prof-phone',p.phone);
@@ -2154,7 +2171,11 @@ function loadProfileForm() {
 
 function saveProfile() {
   const p = gd('profile',{});
-  p.name = val('prof-name');
+  p.firstName    = val('prof-first-name').trim();
+  p.middleInitial= val('prof-middle-name').trim();
+  p.lastName     = val('prof-last-name').trim();
+  // Build full name for display / emergency view
+  p.name = [p.firstName, p.middleInitial ? p.middleInitial+'.' : '', p.lastName].filter(Boolean).join(' ');
   p.dob = val('prof-dob');
   p.address = val('prof-address');
   p.phone = val('prof-phone');
