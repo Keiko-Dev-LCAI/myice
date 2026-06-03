@@ -2308,9 +2308,11 @@ function pinPress(k) {
   if (pinBuffer.length >= 6) return;
   pinBuffer += k;
   updatePinDots();
-  // auto-check when length matches a pin
-  const maxLen = Math.max(s.ownerPin.length||0, s.caregiverPin.length||0) || 4;
-  if (pinBuffer.length >= (s.ownerPin||s.caregiverPin).length) {
+  // auto-check only when buffer length exactly matches a configured PIN length
+  const ownerLen = (s.ownerPin || '').length;
+  const cgLen    = (s.caregiverPin || '').length;
+  if ((ownerLen && pinBuffer.length === ownerLen) ||
+      (cgLen    && pinBuffer.length === cgLen)) {
     setTimeout(checkPin, 100);
   }
 }
