@@ -3854,7 +3854,7 @@ function getAccount() {
   catch(e) { return null; }
 }
 function saveAccount(a) { localStorage.setItem(ACCT_KEY, JSON.stringify(a)); }
-function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; updateAcctHeaderBtn(); }
+function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null; updateAcctHeaderBtn(); }
 // Session persists within the tab — only clears when tab/browser is actually closed
 
 // ── Password Strength ─────────────────────────────────────────────────────────
