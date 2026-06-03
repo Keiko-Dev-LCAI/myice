@@ -2099,36 +2099,6 @@ body.ob-open{overflow:hidden}
   </div>
 
   <div class="card">
-    <div class="card-title">🔒 Security &amp; Access PINs</div>
-    <div class="two-col" style="gap:16px;margin-bottom:16px">
-      <div>
-        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Owner PIN <span class="badge badge-teal" style="font-size:10px">Full Access</span></div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Full access — edit, delete, all sections</div>
-        <div class="form-row" style="margin-bottom:0">
-          <div class="form-group"><label>New PIN (4–6 digits)</label><input class="input" type="password" id="owner-pin-input" placeholder="••••" maxlength="6"></div>
-          <div class="form-group"><label>Confirm PIN</label><input class="input" type="password" id="owner-pin-confirm" placeholder="••••" maxlength="6"></div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="saveOwnerPin()" style="margin-top:8px">Save Owner PIN</button>
-        <button class="btn btn-secondary btn-sm" onclick="clearOwnerPin()" style="margin-top:8px">Clear PIN</button>
-        <div id="owner-pin-msg" style="font-size:12px;margin-top:6px"></div>
-      </div>
-      <div>
-        <div style="font-weight:700;margin-bottom:6px;font-size:14px">Caregiver PIN <span class="badge badge-orange" style="font-size:10px">View + Add</span></div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Can view and add records — cannot delete or edit existing</div>
-        <div class="form-row" style="margin-bottom:0">
-          <div class="form-group"><label>New PIN (4–6 digits)</label><input class="input" type="password" id="cg-pin-input" placeholder="••••" maxlength="6"></div>
-          <div class="form-group"><label>Confirm PIN</label><input class="input" type="password" id="cg-pin-confirm" placeholder="••••" maxlength="6"></div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="saveCaregiverPin()" style="margin-top:8px">Save Caregiver PIN</button>
-        <button class="btn btn-secondary btn-sm" onclick="clearCaregiverPin()" style="margin-top:8px">Clear PIN</button>
-        <div id="cg-pin-msg" style="font-size:12px;margin-top:6px"></div>
-      </div>
-    </div>
-    <div style="background:var(--bg-hover);border-radius:8px;padding:12px;font-size:13px;color:var(--text-muted)">
-      🔓 The Emergency View is <strong style="color:var(--text-secondary)">always accessible</strong> without a PIN — it's designed for first responders.
-    </div>
-  </div>
-  <div class="card">
     <div class="card-title">👥 Who Has Access</div>
     <p style="font-size:20px;color:var(--text-secondary);margin-bottom:16px">Everyone logs in with the same account password. Each person gets their own PIN — used only to identify who made changes in the Access Log.</p>
     <div id="identities-list" style="margin-bottom:16px"></div>
@@ -2295,17 +2265,15 @@ body.ob-open{overflow:hidden}
   </div>
 
   <div class="card">
-    <div class="card-title">What is the PIN system?</div>
+    <div class="card-title">How does access work for caregivers and family?</div>
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
-      <p>MyICE has two PIN levels to protect your records:</p>
+      <p>Everyone who should access your records — you, a spouse, a nurse, a family member — uses the <strong style="color:var(--text-primary)">same username and password</strong> to log in. This gives full access to view and update all records.</p>
       <br>
-      <p><strong style="color:var(--accent)">Owner PIN</strong> — Full access. Add, edit, and delete anything. Set this in Settings.</p>
+      <p>After logging in, each person enters their own <strong style="color:var(--text-primary)">identity PIN</strong>. This PIN does not control what they can do — it simply identifies who they are in the <strong style="color:var(--text-primary)">Access Log</strong>, so you always know who made changes and when.</p>
       <br>
-      <p><strong style="color:var(--text-secondary)">Caregiver PIN</strong> — Limited access. A family member or caregiver can view records and add new entries, but cannot edit or delete existing records. Set this in Settings.</p>
+      <p>The account owner manages PINs in <strong>Settings → Who Has Access</strong>. Add each person with a name and a unique 4–6 digit PIN.</p>
       <br>
-      <p><strong>Emergency View</strong> — No PIN needed. Anyone can tap Emergency and see only what you marked as emergency-visible. They cannot access anything else in the app.</p>
-      <br>
-      <p>If you do not set a PIN, the app is fully open. We recommend setting at least an Owner PIN to protect your private health records.</p>
+      <p><strong>Emergency View</strong> — No login needed. Anyone can tap Emergency and see your emergency medical information. They cannot access anything else in the app.</p>
     </div>
   </div>
 
