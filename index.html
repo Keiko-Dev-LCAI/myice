@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MyICE ⚕️ — Personal Health Vault</title>
-<!-- v46.18 -->
+<!-- v46.19 -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4944,63 +4944,135 @@ function doLogout() {
   showToast('Logged out.');
 }
 
-// ── Biometrics (WebAuthn) ─────────────────────────────────────────────────────
+// ── Biometrics v2 (WebAuthn PRF — truly passwordless) ─────────────────────────
+// PRF extension lets biometric generate a deterministic secret → used to wrap AES key.
+// Storage: localStorage 'myice_bio_prf' = { credentialId, wrappedKey, iv, address, username }
+
+const BIO_PRF_KEY   = 'myice_bio_prf';
+const BIO_PRF_SALT  = new TextEncoder().encode('myice-aes-key-v1'); // fixed salt → deterministic PRF output
+
+function base64urlEncode(bytes) {
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+function base64urlDecode(str) {
+  str = str.replace(/-/g,'+').replace(/_/g,'/');
+  while(str.length%4) str+='=';
+  return Uint8Array.from(atob(str), c=>c.charCodeAt(0));
+}
+async function wrapAESKeyWithPRF(prfOutput, aesKey) {
+  const wk  = await crypto.subtle.importKey('raw', prfOutput, 'AES-GCM', false, ['wrapKey']);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const raw = await crypto.subtle.wrapKey('raw', aesKey, wk, { name:'AES-GCM', iv });
+  return { wrappedKey: bytesToHex(new Uint8Array(raw)), iv: bytesToHex(iv) };
+}
+async function unwrapAESKeyWithPRF(prfOutput, wrappedKeyHex, ivHex) {
+  const wk  = await crypto.subtle.importKey('raw', prfOutput, 'AES-GCM', false, ['unwrapKey']);
+  const raw = Uint8Array.from(wrappedKeyHex.match(/.{2}/g).map(h=>parseInt(h,16)));
+  const iv  = Uint8Array.from(ivHex.match(/.{2}/g).map(h=>parseInt(h,16)));
+  return crypto.subtle.unwrapKey('raw', raw, wk, {name:'AES-GCM',iv}, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
+}
 
 async function setupBiometric() {
   const acct = getAccount();
   if(!acct) { showToast('Create an account first.'); return; }
-  if(!_sessionLoggedIn) { showToast('Log in first, then set up biometrics.'); return; }
+  if(!_sessionLoggedIn || !_sessionKey) { showToast('Log in first, then set up biometrics.'); return; }
   try {
     const cred = await navigator.credentials.create({ publicKey: {
-      challenge:  crypto.getRandomValues(new Uint8Array(32)),
-      rp:         { name: 'MyICE Health Vault', id: location.hostname },
-      user:       { id: new TextEncoder().encode(acct.username), name: acct.username, displayName: acct.username },
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rp:        { name:'MyICE Health Vault', id:location.hostname },
+      user:      { id:new TextEncoder().encode(acct.username), name:acct.username, displayName:acct.username },
       pubKeyCredParams: [{ type:'public-key', alg:-7 },{ type:'public-key', alg:-257 }],
-      authenticatorSelection: { userVerification:'required' },
-      timeout:    60000,
+      authenticatorSelection: { userVerification:'required', residentKey:'discouraged' },
+      timeout: 60000,
+      extensions: { prf:{ eval:{ first:BIO_PRF_SALT } } }
     }});
-    const credId = bytesToHex(new Uint8Array(cred.rawId));
+    const ext = cred.getClientExtensionResults();
+    if(!ext.prf?.results?.first) {
+      showToast('⚠️ Your browser supports biometrics but not passwordless login yet. Try updating your browser, then set this up again.');
+      return;
+    }
+    const prfOutput = new Uint8Array(ext.prf.results.first);
+    const { wrappedKey, iv } = await wrapAESKeyWithPRF(prfOutput, _sessionKey);
+    const credId = base64urlEncode(new Uint8Array(cred.rawId));
+    localStorage.setItem(BIO_PRF_KEY, JSON.stringify({ credentialId:credId, wrappedKey, iv, address:acct.address, username:acct.username }));
     acct.hasBiometric = true;
-    acct.credentialId = credId;
     saveAccount(acct);
     loadSettingsPage();
-    showToast('👆 Biometric login enabled!');
+    showToast('✅ Biometric login enabled! Next time, just use your fingerprint or Face ID — no password needed.');
   } catch(e) {
-    showToast('Biometric setup failed: ' + e.message);
+    if(e.name==='NotAllowedError') return;
+    showToast('⚠️ Biometric setup failed. Please try again.');
+    console.error(e);
   }
 }
 
 async function doBiometricLogin() {
-  const acct = getAccount();
-  if(!acct || !acct.credentialId) { showToast('No biometric enrolled.'); return; }
+  const stored = JSON.parse(localStorage.getItem(BIO_PRF_KEY) || 'null');
+  if(!stored) { showToast('No biometric enrolled. Please log in with your password.'); return; }
   try {
-    const credIdBytes = Uint8Array.from(acct.credentialId.match(/.{2}/g).map(h=>parseInt(h,16)));
-    await navigator.credentials.get({ publicKey: {
-      challenge:  crypto.getRandomValues(new Uint8Array(32)),
-      rpId:       location.hostname,
-      allowCredentials: [{ type:'public-key', id: credIdBytes }],
+    const assertion = await navigator.credentials.get({ publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId:      location.hostname,
+      allowCredentials: [{ type:'public-key', id:base64urlDecode(stored.credentialId) }],
       userVerification: 'required',
       timeout: 60000,
+      extensions: { prf:{ eval:{ first:BIO_PRF_SALT } } }
     }});
-    // Biometric verified — but we still need the AES key (derived from password)
-    // We can't get the AES key from biometrics alone — prompt for password once after biometric
-    // In production: store encrypted AES key in WebAuthn PRF extension
-    // For v1: biometric proves identity, then ask for password to unlock session
-    document.getElementById('acct-login-user').value = acct.username;
+    const ext = assertion.getClientExtensionResults();
+    if(!ext.prf?.results?.first) {
+      showToast('⚠️ Passwordless login not supported on this browser. Please use your password.');
+      return;
+    }
+    const prfOutput = new Uint8Array(ext.prf.results.first);
+    const aesKey    = await unwrapAESKeyWithPRF(prfOutput, stored.wrappedKey, stored.iv);
+    // Session setup — same as password login
+    _sessionKey      = aesKey;
+    _sessionAddr     = stored.address;
+    _sessionLoggedIn = true;
+    sessionAuth      = 'owner';
+    if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
+    await saveSessionToStorage();
     closeAcctModal();
-    showToast('👆 Identity verified! Enter your password to unlock data.');
-    openAcctModal();
-    document.getElementById('acct-login-pass').focus();
+    updateAcctHeaderBtn();
+    loadSettingsPage();
+    auditLog('login', 'Account', 'Biometric login as ' + stored.username);
+    const doSync = () => {
+      if(_syncAfterLogin) { _syncAfterLogin=false; setTimeout(syncToChain,400); }
+      else                { setTimeout(pullFromChain,600); }
+    };
+    const ids = getIdentities();
+    if(ids.length > 0)    { showIdentityModal(()=>{ doSync(); }); }
+    else if(isPremium())  { showPinCreationRequired(()=>{ doSync(); }); }
+    else                  { doSync(); }
   } catch(e) {
-    showToast('Biometric login failed. Use your password instead.');
+    if(e.name==='NotAllowedError') return;
+    showToast('⚠️ Biometric login failed. Please use your password instead.');
+    console.error(e);
   }
 }
 
 function offerBiometricSetup() {
   if(!window.PublicKeyCredential) return;
   const acct = getAccount();
-  if(!acct || acct.hasBiometric) return;
-  if(confirm('Set up fingerprint / Face ID for quick login? (Recommended)')) setupBiometric();
+  if(!acct) return;
+  if(localStorage.getItem(BIO_PRF_KEY)) return; // already enrolled
+  // Non-blocking bottom banner — friendlier than native confirm()
+  if(document.getElementById('bio-setup-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'bio-setup-banner';
+  banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border-top:2px solid var(--accent);padding:20px 24px;z-index:999;display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 -4px 20px rgba(0,0,0,0.4)';
+  banner.innerHTML = `
+    <div style="flex:1;min-width:180px">
+      <div style="font-size:22px;font-weight:700">👆 Set up fingerprint / Face ID?</div>
+      <div style="font-size:17px;color:var(--text-secondary);margin-top:4px">Log in with one touch next time — no password needed.</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button onclick="document.getElementById('bio-setup-banner').remove();setupBiometric()"
+        style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px 22px;font-size:19px;font-weight:700;cursor:pointer;font-family:inherit">Set up</button>
+      <button onclick="document.getElementById('bio-setup-banner').remove()"
+        style="background:var(--bg-hover);color:var(--text-secondary);border:1px solid var(--border);border-radius:8px;padding:12px 18px;font-size:19px;cursor:pointer;font-family:inherit">Not now</button>
+    </div>`;
+  document.body.appendChild(banner);
 }
 
 // ── On-Chain Sync (Premium) ────────────────────────────────────────────────────
@@ -5216,11 +5288,12 @@ async function loadFromChain() {
 function openAcctModal() {
   const acct = getAccount();
   const overlay = document.getElementById('acct-overlay');
-  // Show biometric button if enrolled
+  // Show biometric button if PRF credential enrolled on this device
   const bioBtn = document.getElementById('bio-login-btn');
-  if(bioBtn && acct && acct.hasBiometric && window.PublicKeyCredential) {
+  const bioPRF = JSON.parse(localStorage.getItem(BIO_PRF_KEY)||'null');
+  if(bioBtn && bioPRF && window.PublicKeyCredential) {
     bioBtn.style.display = 'block';
-    document.getElementById('acct-login-user').value = acct.username || '';
+    document.getElementById('acct-login-user').value = bioPRF.username || '';
   }
   overlay.classList.add('visible');
 }
@@ -5325,7 +5398,7 @@ function renderAcctSettings() {
     ${_sessionLoggedIn
       ? `<div style="display:flex;gap:10px;flex-wrap:wrap">
            <button class="btn btn-secondary" onclick="doLogout()">🔒 Lock Session</button>
-           ${acct.hasBiometric
+           ${localStorage.getItem(BIO_PRF_KEY)
              ? '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Re-enroll Biometrics</button>'
              : '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Set Up Fingerprint/Face ID</button>'}
          </div>`
