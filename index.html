@@ -4170,21 +4170,23 @@ function renderAcctSettings() {
   }
 
   const lastSync = acct.lastSynced ? new Date(acct.lastSynced).toLocaleString() : 'Never';
-  const syncedHtml = premium
-    ? `<div style="margin-top:16px">
+
+  // Sync button always at top, always visible when premium
+  const syncTopHtml = premium
+    ? `<div style="margin-bottom:20px">
         <button class="sync-btn" id="sync-chain-btn" onclick="syncToChain()">☁️ Sync to Chain</button>
         <div class="sync-status">Last synced: ${lastSync}</div>
         ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
        </div>`
-    : `<div style="margin-top:14px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:20px;color:var(--text-secondary)">
-        ⭐ <strong>Premium</strong> — Cloud sync (cross-device backup) requires Premium ($3/month).
-       </div>`
-;
+    : `<div style="margin-bottom:16px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:20px;color:var(--text-secondary)">
+        ⭐ <strong>Premium</strong> — Cloud sync requires Premium ($3/month in LCAI).
+       </div>`;
 
   el.innerHTML = `
+    ${syncTopHtml}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div style="font-size:22px;font-weight:700">👤 ${esc(acct.username)}</div>
-      ${_sessionLoggedIn ? '<span class="chain-badge">🔓 Logged in</span>' : '<span style="font-size:18px;color:var(--text-muted)">Session locked — tap Unlock</span>'}
+      ${_sessionLoggedIn ? '<span class="chain-badge">🔓 Unlocked</span>' : '<span style="font-size:18px;color:var(--text-muted)">Tap to unlock session</span>'}
     </div>
     ${_sessionLoggedIn
       ? `<div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -4193,11 +4195,10 @@ function renderAcctSettings() {
              ? '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Re-enroll Biometrics</button>'
              : '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Set Up Fingerprint/Face ID</button>'}
          </div>`
-      : `<button class="btn btn-primary" onclick="openAcctModal()">🔓 Unlock Session</button>`}
-    <div style="font-size:18px;color:var(--text-muted);margin-top:10px;word-break:break-all">
-      On-chain address: <code style="font-size:16px">${acct.address}</code>
-    </div>
-    ${syncedHtml}`;
+      : `<button class="btn btn-secondary" style="font-size:18px" onclick="openAcctModal()">🔓 Unlock Session</button>`}
+    <div style="font-size:16px;color:var(--text-muted);margin-top:12px;word-break:break-all">
+      On-chain address: <code style="font-size:14px">${acct.address}</code>
+    </div>`;
 }
 
 function initAccount() {
