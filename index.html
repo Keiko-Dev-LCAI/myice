@@ -4833,15 +4833,15 @@ async function doCreateAccount() {
     const ids = getIdentities();
     if(ids.length > 0) {
       showIdentityModal(() => {
-        if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+        setTimeout(offerBiometricSetup, 600);
       });
     } else if(isPremium()) {
       showPinCreationRequired(() => {
-        if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+        setTimeout(offerBiometricSetup, 600);
       });
     } else {
       // Offer biometric setup
-      if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+      setTimeout(offerBiometricSetup, 600);
     }
   } catch(e) {
     errEl.textContent = 'Error creating account. Please try again.';
@@ -4892,7 +4892,7 @@ async function doLogin() {
         // Always pull from chain — if no record exists, toast will say so
         setTimeout(pullFromChain, 600);
       }
-      if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 3000);
+      setTimeout(offerBiometricSetup, 3000);
     } catch(e) {
       errEl.textContent = 'Login failed. Please try again.';
     }
@@ -4935,7 +4935,7 @@ async function doLogin() {
       doSync();
     }
     // Offer biometric setup after sync message clears
-    if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 3000);
+    setTimeout(offerBiometricSetup, 3000);
   } catch(e) {
     errEl.textContent = 'Login failed. Please try again.';
   }
@@ -5055,7 +5055,6 @@ async function doBiometricLogin() {
 }
 
 function offerBiometricSetup() {
-  if(!window.PublicKeyCredential) return;
   const acct = getAccount();
   if(!acct) return;
   if(localStorage.getItem(BIO_PRF_KEY)) return; // already enrolled
