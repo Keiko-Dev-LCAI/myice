@@ -3738,6 +3738,7 @@ const STORE_ADDR = '0x2902Ff4e773E3dEB8C193d77442CE22e7d96299a';
 let _sessionKey    = null;   // CryptoKey (AES-GCM) for encrypting private data
 let _sessionAddr   = null;   // derived Ethereum address (on-chain identifier)
 let _sessionLoggedIn = false;
+let _syncAfterLogin = false; // auto-sync immediately after login if true
 
 // ── Key Derivation ─────────────────────────────────────────────────────────────
 
@@ -3903,7 +3904,13 @@ async function doLogin() {
     closeAcctModal();
     updateAcctHeaderBtn();
     loadSettingsPage();
-    showToast('🔓 Logged in successfully.');
+    if(_syncAfterLogin) {
+      _syncAfterLogin = false;
+      showToast('🔓 Logged in — syncing now…');
+      setTimeout(syncToChain, 400);
+    } else {
+      showToast('🔓 Logged in successfully.');
+    }
   } catch(e) {
     errEl.textContent = 'Login failed. Please try again.';
   }
@@ -4007,7 +4014,19 @@ function buildPrivatePayload() {
 
 async function syncToChain() {
   if(!_sessionLoggedIn || !_sessionKey || !_sessionAddr) {
-    showToast('Log in first to sync.'); return;
+    // Auto-prompt for password, then sync immediately after
+    _syncAfterLogin = true;
+    switchAcctTab('login');
+    openAcctModal();
+    // Pre-fill username and show a clear reason
+    const acct = getAccount();
+    if(acct) {
+      const uField = document.getElementById('acct-login-user');
+      if(uField) uField.value = acct.username;
+    }
+    const errEl = document.getElementById('acct-login-error');
+    if(errEl) { errEl.style.color = 'var(--accent)'; errEl.textContent = 'Enter your password to sync to the blockchain.'; }
+    return;
   }
   const btn = document.getElementById('sync-chain-btn');
   if(btn) { btn.textContent = '⏳ Syncing…'; btn.disabled = true; }
@@ -4171,16 +4190,12 @@ function renderAcctSettings() {
 
   const lastSync = acct.lastSynced ? new Date(acct.lastSynced).toLocaleString() : 'Never';
 
-  // Sync button always at top, always visible when premium
-  const syncTopHtml = premium
-    ? `<div style="margin-bottom:20px">
-        <button class="sync-btn" id="sync-chain-btn" onclick="syncToChain()">☁️ Sync to Chain</button>
-        <div class="sync-status">Last synced: ${lastSync}</div>
-        ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
-       </div>`
-    : `<div style="margin-bottom:16px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:20px;color:var(--text-secondary)">
-        ⭐ <strong>Premium</strong> — Cloud sync requires Premium ($3/month in LCAI).
-       </div>`;
+  // Sync button always at top — always visible if account exists
+  const syncTopHtml = `<div style="margin-bottom:20px">
+      <button class="sync-btn" id="sync-chain-btn" onclick="syncToChain()">☁️ Sync to Chain</button>
+      <div class="sync-status">Last synced: ${lastSync}</div>
+      ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
+     </div>`;
 
   el.innerHTML = `
     ${syncTopHtml}
