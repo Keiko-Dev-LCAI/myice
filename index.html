@@ -4153,8 +4153,16 @@ async function pullFromChain() {
     keys.forEach(k => { if(chainData[k]) _origSetItem(pk(k), chainData[k]); });
     const acct = getAccount();
     if(acct && chainData.syncedAt) { acct.lastSynced = chainData.syncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
-    dismissSyncOverlay(false);
-    showToast('✅ Data is current');
+    // Debug: show what meds were loaded
+    try {
+      const loadedMeds = JSON.parse(chainData['medications'] || '[]');
+      const medNames = loadedMeds.map(m=>m.name).join(', ') || 'none';
+      dismissSyncOverlay(false);
+      showToast('☁️ Chain meds: ' + medNames, 6000);
+    } catch(e) {
+      dismissSyncOverlay(false);
+      showToast('☁️ Chain loaded (no meds found)', 6000);
+    }
     // Refresh current section
     const activeSection = document.querySelector('.section[style*="block"]');
     if(activeSection) showSection(activeSection.id.replace('section-',''));
@@ -4385,7 +4393,7 @@ function initAccount() {
 
 // renderAcctSettings() is called directly inside loadSettingsPage() above
 
-function showToast(msg) {
+function showToast(msg, duration) {
   let t = document.getElementById('toast-msg');
   if(!t) {
     t = document.createElement('div');
@@ -4396,7 +4404,7 @@ function showToast(msg) {
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+  t._timer = setTimeout(()=>{ t.style.opacity='0'; }, duration || 3500);
 }
 </script>
 </body>
