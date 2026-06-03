@@ -4108,15 +4108,23 @@ async function pullFromChain() {
   showSyncOverlay();
 
   // 15-second timeout — show warning and let user proceed with local data
+  // After 5s: show "still connecting" message
+  const slowWarningId = setTimeout(() => {
+    const msg = document.getElementById('sync-loading-msg');
+    if(msg) msg.innerHTML = 'Downloading your latest health records from the blockchain.<br><br><strong style="color:var(--accent)">Still connecting — the server may be waking up.<br>This can take up to 20 seconds on the first login of the day.</strong><br><br>Please continue to wait.';
+  }, 5000);
+  // After 20s: show timeout warning
   const timeoutId = setTimeout(() => {
+    clearTimeout(slowWarningId);
     document.getElementById('sync-loading-msg').textContent = '';
     document.getElementById('sync-loading-timeout').style.display = 'block';
-  }, 15000);
+  }, 20000);
 
   try {
     const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}`);
     const data = await resp.json();
     clearTimeout(timeoutId);
+    clearTimeout(slowWarningId);
     if(!data.hasRecord || !data.privateData) {
       // No cloud backup — this device is the source of truth, proceed normally
       dismissSyncOverlay(false);
@@ -4143,6 +4151,7 @@ async function pullFromChain() {
     if(activeSection) showSection(activeSection.id.replace('section-',''));
   } catch(e) {
     clearTimeout(timeoutId);
+    clearTimeout(slowWarningId);
     console.log('[pullFromChain] error:', e.message);
     document.getElementById('sync-loading-msg').textContent = '';
     document.getElementById('sync-loading-timeout').style.display = 'block';
