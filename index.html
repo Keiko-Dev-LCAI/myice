@@ -665,6 +665,7 @@ body.ob-open{overflow:hidden}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
+      <span id="auto-sync-status" style="display:none;font-size:13px;color:var(--accent);white-space:nowrap;margin-left:4px">☁️ Saving…</span>
       <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 10px;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;margin-left:6px;flex-shrink:1"><span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
@@ -2215,6 +2216,42 @@ let _lcaiPrice = null, _lcaiPriceTs = 0;
 
 let activeProfileId = 'default';
 let sessionAuth = null; // null | 'owner' | 'caregiver'
+
+// ── AUTO-SYNC ENGINE ─────────────────────────────────────────────────────────
+let _autoSyncTimer   = null;
+let _autoSyncBusy    = false;
+const AUTO_SYNC_DELAY = 20000; // 20 seconds after last change
+
+function scheduleAutoSync() {
+  if(!_sessionLoggedIn || !_sessionKey || !_sessionAddr) return; // session must be active
+  if(_autoSyncTimer) clearTimeout(_autoSyncTimer);
+  _autoSyncTimer = setTimeout(async () => {
+    if(_autoSyncBusy || !_sessionLoggedIn) return;
+    _autoSyncBusy = true;
+    _showSyncStatus('☁️ Auto-syncing…');
+    try {
+      await syncToChain();
+    } catch(e) {}
+    _autoSyncBusy = false;
+    _showSyncStatus('');
+  }, AUTO_SYNC_DELAY);
+}
+
+function _showSyncStatus(msg) {
+  let el = document.getElementById('auto-sync-status');
+  if(!el) return;
+  el.textContent = msg;
+  el.style.display = msg ? 'inline' : 'none';
+}
+
+// Hook localStorage.setItem — auto-sync on any health data change
+const _origSetItem = localStorage.setItem.bind(localStorage);
+localStorage.setItem = function(key, value) {
+  _origSetItem(key, value);
+  if(key.startsWith(STORAGE_PREFIX) && key !== STORAGE_PREFIX + 'settings') {
+    scheduleAutoSync();
+  }
+};
 let pinCallback = null;
 let pinBuffer = '';
 let vitalsRange = '7d';
@@ -4056,16 +4093,19 @@ async function syncToChain() {
     const result = await resp.json();
     if(result.success) {
       const acct = getAccount();
-      if(acct) { acct.lastSynced = Date.now(); saveAccount(acct); }
-      showToast('✅ Health data synced to Lightchain!');
+      if(acct) { acct.lastSynced = Date.now(); _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
+      if(!_autoSyncBusy) showToast('✅ Synced to Lightchain!');
+      _showSyncStatus('✅ Saved');
+      setTimeout(() => _showSyncStatus(''), 3000);
       loadSettingsPage();
     } else {
-      showToast('Sync failed: ' + (result.error || 'Unknown error'));
+      if(!_autoSyncBusy) showToast('Sync failed: ' + (result.error || 'Unknown error'));
     }
   } catch(e) {
-    showToast('Sync error: ' + e.message);
+    if(!_autoSyncBusy) showToast('Sync error: ' + e.message);
   } finally {
     if(btn) { btn.textContent = '☁️ Sync to Chain'; btn.disabled = false; }
+    _autoSyncBusy = false;
   }
 }
 
