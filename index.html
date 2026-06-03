@@ -5346,9 +5346,9 @@ function updateAcctHeaderBtn() {
     btn.title = acct.username + ' — tap for account menu';
     btn.onclick = () => showAcctMenu();
   } else {
-    // Account exists but session locked — show username so user knows they're registered
-    label.textContent = acct.username;
-    btn.title = 'Tap to unlock — ' + acct.username;
+    // Not logged in — show plain Log In
+    label.textContent = 'Log In';
+    btn.title = 'Log in';
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   }
   // Update sidebar logout area
@@ -5360,7 +5360,7 @@ function updateAcctHeaderBtn() {
       </div>`;
     } else if(acct) {
       sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="switchAcctTab('login');openAcctModal();closeSidebar()">
-        <span class="nav-icon">👤</span> Log In as ${esc(acct.username)}
+        <span class="nav-icon">👤</span> Log In
       </div>`;
     } else {
       sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="openAcctModal();closeSidebar()">
