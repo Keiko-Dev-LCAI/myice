@@ -4107,8 +4107,9 @@ function updateAcctHeaderBtn() {
     btn.title = acct.username + ' — tap for account menu';
     btn.onclick = () => showAcctMenu();
   } else {
-    label.textContent = 'Login';
-    btn.title = 'Tap to log back in as ' + acct.username;
+    // Account exists but session locked — show username so user knows they're registered
+    label.textContent = acct.username;
+    btn.title = 'Tap to unlock — ' + acct.username;
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   }
   // Update sidebar logout area
