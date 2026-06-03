@@ -1099,8 +1099,8 @@ body.ob-open{overflow:hidden}
         <input class="input" id="med-freq" placeholder="e.g. Twice daily with meals">
       </div>
       <div class="form-group">
-        <label>Prescribing Doctor</label>
-        <input class="input" id="med-doctor" placeholder="Dr. Smith">
+        <label>Prescribing Doctor (just last name — "Dr." is added automatically)</label>
+        <input class="input" id="med-doctor" placeholder="Smith">
       </div>
     </div>
     <button class="btn btn-primary" onclick="addMedication()">+ Add Medication</button>
@@ -2723,16 +2723,18 @@ function renderMedications() {
   items.forEach(m=>{
     const vis=m.emergencyVisible!==false;
     const locked=!isPremium();
-    html+=`<div class="list-item">
-      <div style="font-size:24px;flex-shrink:0">💊</div>
-      <div class="list-item-content">
-        <div class="list-item-title">${esc(m.name)} <span style="font-weight:400;color:var(--text-secondary)">${esc(m.dose||'')}</span></div>
-        <div class="list-item-subtitle">${esc(m.route||'')} · ${esc(m.freq||'')}${m.doctor?' · Prescribed by Dr. '+esc(m.doctor):''}</div>
+    html+=`<div class="list-item" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:24px;flex-shrink:0">💊</div>
+        <div style="flex:1;min-width:0">
+          <div class="list-item-title">${esc(m.name)} <span style="font-weight:400;color:var(--text-secondary)">${esc(m.dose||'')}</span></div>
+          ${(m.route||m.freq||m.doctor)?`<div class="list-item-subtitle">${[m.route,m.freq,m.doctor?'Dr. '+m.doctor:''].filter(Boolean).map(esc).join(' · ')}</div>`:''}
+        </div>
       </div>
-      <div class="list-item-actions">
-        <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleMedVis('${m.id}',this)">${vis?'🔓':'🔒'}</button>
-        <button class="btn btn-sm ${locked?'btn-locked':''}" onclick="${locked?'showUpgradeToast()':'explainMed(\''+m.id+'\')'}">🤖 ${locked?'🔒 ':''} Explain</button>
-        <button class="btn-icon danger owner-only" onclick="deleteItem('medications','${m.id}',renderMedications)">🗑️</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="privacy-toggle ${vis?'visible':'private'}" onclick="toggleMedVis('${m.id}',this)" style="font-size:18px;padding:8px 12px">${vis?'🔓 Visible':'🔒 Private'}</button>
+        <button class="btn btn-sm ${locked?'btn-locked':''}" onclick="${locked?'showUpgradeToast()':'explainMed(\''+m.id+'\')'}" style="font-size:18px">🤖 Explain${locked?' ⭐':''}</button>
+        <button class="btn-icon danger owner-only" onclick="deleteItem('medications','${m.id}',renderMedications)" style="font-size:18px;padding:8px 12px">🗑️ Delete</button>
       </div>
     </div>`;
   });
@@ -2740,7 +2742,8 @@ function renderMedications() {
 }
 function addMedication() {
   const name=val('med-name').trim(); if(!name) return;
-  const items=gd('medications',[]); items.push({id:uid(),name,dose:val('med-dose'),route:val('med-route'),freq:val('med-freq'),doctor:val('med-doctor'),emergencyVisible:true});
+  const doctorRaw = val('med-doctor').trim().replace(/^dr\.?\s*/i,'');
+  const items=gd('medications',[]); items.push({id:uid(),name,dose:val('med-dose'),route:val('med-route'),freq:val('med-freq'),doctor:doctorRaw,emergencyVisible:true});
   sd('medications',items); clearFields(['med-name','med-dose','med-freq','med-doctor']); renderMedications();
 }
 function toggleMedVis(id,btn) {
