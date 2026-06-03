@@ -71,6 +71,7 @@ a{color:inherit;text-decoration:none}
 .main-content{flex:1;padding:32px 36px;overflow-y:auto;overflow-x:hidden;min-width:0;max-width:100%}
 .section{display:none;width:100%;animation:fadein 0.2s ease}
 @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
 
 /* ── SECTION HEADER ── */
 .section-title{font-size:52px;font-weight:800;color:var(--text-primary);margin-bottom:26px;display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--border)}
@@ -826,6 +827,11 @@ body.ob-open{overflow:hidden}
       <div class="sidebar-section-label">Connected</div>
       <div class="nav-item" data-section="healthapps" onclick="navTo('healthapps')">
         <span class="nav-icon">🔗</span> My Health Apps
+      </div>
+
+      <div class="sidebar-section-label">AI Assistant</div>
+      <div class="nav-item" data-section="ai-chat" onclick="navTo('ai-chat')" style="color:var(--accent)">
+        <span class="nav-icon">🎙️</span> Ask Health AI
       </div>
 
       <div class="sidebar-section-label">Manage</div>
@@ -1623,6 +1629,81 @@ body.ob-open{overflow:hidden}
   </div>
   <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">📞 Phone numbers are tappable on mobile. Use ▲▼ to set priority order.</p>
   <div id="emergency-contacts-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: AI HEALTH ASSISTANT CHAT
+══════════════════════════════════════ -->
+<div class="section" id="section-ai-chat">
+  <div class="section-title"><span class="title-icon">🎙️</span> Ask Health AI</div>
+
+  <div class="card" style="border-color:var(--accent);background:var(--accent-dim);margin-bottom:16px">
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin:0">
+      Ask any health question by <strong style="color:var(--text-primary)">typing or speaking</strong>. Tap the 🎙️ mic button and speak — your words will appear automatically. The AI knows your medications, conditions, and allergies.
+      <br><span style="color:var(--warning);font-weight:700">⚠️ General information only — not medical advice. Always check with your doctor.</span>
+    </p>
+  </div>
+
+  <!-- Chat message window -->
+  <div id="ai-chat-messages" style="
+    min-height:300px;
+    max-height:55vh;
+    overflow-y:auto;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:14px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  ">
+    <div id="ai-chat-welcome" style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:20px">
+      <div style="font-size:48px;margin-bottom:8px">🎙️</div>
+      <div>Tap the mic and speak, or type a question below.</div>
+      <div style="margin-top:8px;font-size:18px">Examples: "What is aspirin used for?" &nbsp;·&nbsp; "Do my medications interact?"</div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div style="display:flex;gap:10px;align-items:flex-end">
+    <textarea id="ai-chat-input"
+      placeholder="Type your question here, or tap 🎙️ to speak…"
+      rows="2"
+      style="
+        flex:1;
+        font-size:20px;
+        font-family:inherit;
+        padding:12px 16px;
+        border-radius:10px;
+        border:2px solid var(--border);
+        background:var(--bg-primary);
+        color:var(--text-primary);
+        resize:none;
+        outline:none;
+        line-height:1.5;
+      "
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiChat();}"
+    ></textarea>
+
+    <!-- Mic button -->
+    <button id="ai-mic-btn" onclick="toggleVoiceInput()" title="Speak your question" style="
+      width:58px;height:58px;border-radius:50%;border:2px solid var(--accent);
+      background:var(--bg-card);color:var(--accent);font-size:26px;
+      cursor:pointer;flex-shrink:0;transition:all 0.2s;display:flex;align-items:center;justify-content:center;
+    ">🎙️</button>
+
+    <!-- Send button -->
+    <button onclick="sendAiChat()" style="
+      height:58px;padding:0 20px;border-radius:10px;border:none;
+      background:var(--accent);color:#fff;font-size:20px;font-weight:700;
+      cursor:pointer;flex-shrink:0;font-family:inherit;
+    ">Send</button>
+  </div>
+
+  <div style="margin-top:8px;display:flex;justify-content:flex-end">
+    <button onclick="clearAiChat()" style="background:none;border:none;color:var(--text-muted);font-size:17px;cursor:pointer;font-family:inherit">🗑️ Clear conversation</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -2594,6 +2675,198 @@ function clearAuditLog() {
   localStorage.removeItem(AUDIT_KEY);
   renderAuditLog();
   auditLog('delete', 'Access Log', 'Log cleared');
+}
+
+// ── AI HEALTH ASSISTANT CHAT ─────────────────────────────────────────────────
+
+let _aiChatHistory = []; // [{role:'user'|'ai', text, ts}]
+let _aiChatBusy    = false;
+let _voiceRecog    = null;
+let _voiceActive   = false;
+
+function renderAiChatMessages() {
+  const box = document.getElementById('ai-chat-messages');
+  if(!box) return;
+  if(!_aiChatHistory.length) {
+    box.innerHTML = `<div id="ai-chat-welcome" style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:20px">
+      <div style="font-size:48px;margin-bottom:8px">🎙️</div>
+      <div>Tap the mic and speak, or type a question below.</div>
+      <div style="margin-top:8px;font-size:18px">Examples: "What is aspirin used for?" &nbsp;·&nbsp; "Do my medications interact?"</div>
+    </div>`;
+    return;
+  }
+  box.innerHTML = _aiChatHistory.map(m => {
+    const isUser = m.role === 'user';
+    return `<div style="display:flex;flex-direction:column;align-items:${isUser?'flex-end':'flex-start'};gap:4px">
+      <div style="
+        max-width:88%;padding:12px 16px;border-radius:${isUser?'16px 16px 4px 16px':'16px 16px 16px 4px'};
+        background:${isUser?'var(--accent)':'var(--bg-hover)'};
+        color:${isUser?'#fff':'var(--text-primary)'};
+        font-size:20px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+      ">${esc(m.text)}</div>
+      <div style="font-size:15px;color:var(--text-muted);padding:0 4px">${isUser?'You':'🤖 AI Assistant'}</div>
+    </div>`;
+  }).join('');
+  // scroll to bottom
+  box.scrollTop = box.scrollHeight;
+}
+
+function addAiChatMessage(role, text) {
+  _aiChatHistory.push({ role, text, ts: Date.now() });
+  renderAiChatMessages();
+}
+
+function showAiChatThinking() {
+  const box = document.getElementById('ai-chat-messages');
+  if(!box) return;
+  // Remove any existing thinking indicator
+  const old = box.querySelector('#ai-thinking');
+  if(old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'ai-thinking';
+  el.style.cssText = 'display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:20px;padding:8px 4px';
+  el.innerHTML = '<div style="display:flex;gap:5px"><span style="animation:pulse 1s infinite">●</span><span style="animation:pulse 1s 0.3s infinite">●</span><span style="animation:pulse 1s 0.6s infinite">●</span></div> Thinking — this may take up to 2 minutes…';
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
+function removeAiChatThinking() {
+  const el = document.getElementById('ai-thinking');
+  if(el) el.remove();
+}
+
+async function sendAiChat() {
+  const input = document.getElementById('ai-chat-input');
+  if(!input) return;
+  const text = input.value.trim();
+  if(!text || _aiChatBusy) return;
+
+  input.value = '';
+  addAiChatMessage('user', text);
+  _aiChatBusy = true;
+  showAiChatThinking();
+
+  // Build health context from stored data
+  const context = {
+    conditions:  gd('conditions', []),
+    medications: gd('medications', []),
+    allergies:   gd('allergies', []),
+  };
+
+  try {
+    const r = await fetch(`${BACKEND}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, context })
+    });
+    const d = await r.json();
+    removeAiChatThinking();
+    if(!r.ok) throw new Error(d.error || 'Server error');
+    addAiChatMessage('ai', d.response);
+    auditLog('chat', 'AI Assistant', text.slice(0, 80) + (text.length > 80 ? '…' : ''));
+  } catch(e) {
+    removeAiChatThinking();
+    addAiChatMessage('ai', '⚠️ ' + (e.message || 'AI unavailable right now. Please try again shortly.'));
+  } finally {
+    _aiChatBusy = false;
+  }
+}
+
+function clearAiChat() {
+  _aiChatHistory = [];
+  renderAiChatMessages();
+}
+
+// ── VOICE INPUT (Web Speech API) ──────────────────────────────────────────────
+
+function toggleVoiceInput() {
+  if(_voiceActive) {
+    stopVoiceInput();
+  } else {
+    startVoiceInput();
+  }
+}
+
+function startVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SpeechRecognition) {
+    showToast('Voice input is not supported on this browser. Try Chrome or Safari.');
+    return;
+  }
+
+  _voiceRecog = new SpeechRecognition();
+  _voiceRecog.lang = 'en-US';
+  _voiceRecog.continuous = false;
+  _voiceRecog.interimResults = true;
+  _voiceRecog.maxAlternatives = 1;
+
+  const btn   = document.getElementById('ai-mic-btn');
+  const input = document.getElementById('ai-chat-input');
+
+  _voiceRecog.onstart = () => {
+    _voiceActive = true;
+    if(btn) {
+      btn.textContent = '🔴';
+      btn.style.background = 'var(--emergency)';
+      btn.style.borderColor = 'var(--emergency)';
+      btn.style.color = '#fff';
+      btn.title = 'Tap to stop listening';
+    }
+    if(input) input.placeholder = 'Listening…';
+  };
+
+  _voiceRecog.onresult = (event) => {
+    let transcript = '';
+    for(let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    if(input) input.value = transcript;
+  };
+
+  _voiceRecog.onend = () => {
+    _voiceActive = false;
+    if(btn) {
+      btn.textContent = '🎙️';
+      btn.style.background = 'var(--bg-card)';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      btn.title = 'Speak your question';
+    }
+    if(input) input.placeholder = 'Type your question here, or tap 🎙️ to speak…';
+    // Auto-send if something was captured
+    if(input && input.value.trim()) {
+      setTimeout(sendAiChat, 400);
+    }
+  };
+
+  _voiceRecog.onerror = (event) => {
+    _voiceActive = false;
+    if(btn) {
+      btn.textContent = '🎙️';
+      btn.style.background = 'var(--bg-card)';
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+    }
+    if(event.error === 'not-allowed') {
+      showToast('Microphone access denied. Please allow microphone permission in your browser.');
+    } else if(event.error !== 'no-speech') {
+      showToast('Voice input error: ' + event.error);
+    }
+  };
+
+  try {
+    _voiceRecog.start();
+  } catch(e) {
+    showToast('Could not start voice input. Please try again.');
+  }
+}
+
+function stopVoiceInput() {
+  if(_voiceRecog) {
+    try { _voiceRecog.stop(); } catch(e) {}
+    _voiceRecog = null;
+  }
+  _voiceActive = false;
 }
 
 // ── AUTO-SYNC ENGINE ─────────────────────────────────────────────────────────
