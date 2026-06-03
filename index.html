@@ -5397,7 +5397,7 @@ function renderAcctSettings() {
     </div>
     ${_sessionLoggedIn
       ? `<div style="display:flex;gap:10px;flex-wrap:wrap">
-           <button class="btn btn-secondary" onclick="doLogout()">🔒 Lock Session</button>
+           <button class="btn btn-secondary" onclick="doLogout()">🔒 Log Out of Session</button>
            ${localStorage.getItem(BIO_PRF_KEY)
              ? '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Re-enroll Biometrics</button>'
              : '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Set Up Fingerprint/Face ID</button>'}
