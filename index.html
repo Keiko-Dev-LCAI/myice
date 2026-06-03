@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MyICE ⚕️ — Personal Health Vault</title>
-<!-- v46.6 -->
+<!-- v46.7 -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4169,14 +4169,26 @@ async function pullFromChain() {
   }, 20000);
 
   try {
-    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}`);
+    // include_private=true is REQUIRED — backend only returns encrypted data when asked
+    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}&include_private=true`);
     const data = await resp.json();
     clearTimeout(timeoutId);
     clearTimeout(slowWarningId);
-    if(!data.hasRecord || !data.privateData) {
-      // No cloud backup — this device is the source of truth, proceed normally
+    if(!data.hasRecord) {
+      // No cloud backup exists at all — first time on this account
+      const title = document.getElementById('sync-loading-title');
+      const msg   = document.getElementById('sync-loading-msg');
+      const spinner = document.querySelector('#sync-loading-overlay [style*="spin"]');
+      if(title) title.textContent = '✅ No Cloud Backup Yet';
+      if(msg)   msg.innerHTML = 'No cloud backup found for this account. Your local data is safe.<br><br><strong style="color:var(--accent)">Tap Settings → Cloud Sync to back up your data now.</strong>';
+      if(spinner) spinner.style.display = 'none';
+      setTimeout(() => { document.getElementById('sync-loading-overlay').style.display = 'none'; }, 4000);
+      return;
+    }
+    if(!data.privateData) {
+      // Record exists but no private data (emergency-only sync)
       dismissSyncOverlay(false);
-      showToast('No cloud backup yet — your data will sync automatically.');
+      showToast('☁️ Cloud has emergency data only — tap Settings → Cloud Sync to upload your full records.', 6000);
       return;
     }
     const chainData = await decryptData(_sessionKey, data.privateData);
@@ -4187,16 +4199,7 @@ async function pullFromChain() {
     keys.forEach(k => { if(chainData[k]) _origSetItem(pk(k), chainData[k]); });
     const acct = getAccount();
     if(acct && chainData.syncedAt) { acct.lastSynced = chainData.syncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
-    // Debug: show what meds were loaded
-    try {
-      const loadedMeds = JSON.parse(chainData['medications'] || '[]');
-      const medNames = loadedMeds.map(m=>m.name).join(', ') || 'none';
-      dismissSyncOverlay(false);
-      showToast('☁️ Chain meds: ' + medNames, 6000);
-    } catch(e) {
-      dismissSyncOverlay(false);
-      showToast('☁️ Chain loaded (no meds found)', 6000);
-    }
+    dismissSyncOverlay(false);
     // Refresh current section
     const activeSection = document.querySelector('.section[style*="block"]');
     if(activeSection) showSection(activeSection.id.replace('section-',''));
