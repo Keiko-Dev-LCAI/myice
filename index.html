@@ -4132,18 +4132,13 @@ async function pullFromChain() {
       return;
     }
     const chainData = await decryptData(_sessionKey, data.privateData);
+    // Blockchain is always the source of truth — always restore on login
+    const keys = ['profile','conditions','medications','allergies','vitals','lab_results',
+                   'documents','appointments','care_team','emergency_contacts','billing',
+                   'history','vaccinations','vision','devices','symptoms','goals','family_profiles'];
+    keys.forEach(k => { if(chainData[k]) _origSetItem(pk(k), chainData[k]); });
     const acct = getAccount();
-    const localSyncedAt = acct && acct.lastSynced ? acct.lastSynced : 0;
-    const chainSyncedAt = chainData.syncedAt || 0;
-    if(chainSyncedAt > localSyncedAt) {
-      // Chain is newer — restore all keys
-      const keys = ['profile','conditions','medications','allergies','vitals','lab_results',
-                     'documents','appointments','care_team','emergency_contacts','billing',
-                     'history','vaccinations','vision','devices','symptoms','goals','family_profiles'];
-      keys.forEach(k => { if(chainData[k]) _origSetItem(pk(k), chainData[k]); });
-      // Update lastSynced to match chain
-      if(acct) { acct.lastSynced = chainSyncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
-    }
+    if(acct && chainData.syncedAt) { acct.lastSynced = chainData.syncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
     dismissSyncOverlay(false);
     showToast('✅ Data is current');
     // Refresh current section
