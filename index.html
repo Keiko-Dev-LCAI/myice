@@ -551,12 +551,20 @@ body.ob-open{overflow:hidden}
 <div id="sync-loading-overlay" style="display:none;position:fixed;inset:0;background:var(--bg-primary);z-index:99999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center">
   <div style="font-size:64px;margin-bottom:24px">☁️</div>
   <div id="sync-loading-title" style="font-size:34px;font-weight:800;color:var(--text-primary);margin-bottom:16px">Loading Your Health Data</div>
-  <div id="sync-loading-msg" style="font-size:22px;color:var(--text-secondary);line-height:1.5;max-width:480px;margin-bottom:32px">Syncing with cloud backup — please wait before viewing any health information.</div>
+  <div id="sync-loading-msg" style="font-size:22px;color:var(--text-secondary);line-height:1.6;max-width:500px;margin-bottom:24px">
+    Downloading your latest health records from the blockchain.<br><br>
+    <strong style="color:var(--text-primary)">This usually takes 5–15 seconds.</strong><br><br>
+    We do this every time you log in to make sure you — and anyone helping you — always see your most current and accurate health information. Please wait for this to finish before using the app.
+  </div>
   <div style="width:60px;height:60px;border:5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:32px"></div>
-  <div id="sync-loading-timeout" style="display:none;background:#7c2d12;border:2px solid #dc2626;border-radius:12px;padding:20px 24px;max-width:480px">
-    <div style="font-size:26px;font-weight:800;color:#fca5a5;margin-bottom:10px">⚠️ Cloud Unreachable</div>
-    <div style="font-size:20px;color:#fecaca;line-height:1.5;margin-bottom:16px">Could not reach cloud backup. You are viewing <strong>local data only</strong> — this may not be current. Verify critical information before acting.</div>
-    <button class="btn btn-primary" style="font-size:20px;background:#dc2626;border-color:#dc2626" onclick="dismissSyncOverlay(true)">⚠️ Proceed with Local Data</button>
+  <div id="sync-loading-timeout" style="display:none;background:#7c2d12;border:2px solid #dc2626;border-radius:12px;padding:24px;max-width:500px">
+    <div style="font-size:26px;font-weight:800;color:#fca5a5;margin-bottom:12px">⚠️ Could Not Reach Cloud</div>
+    <div style="font-size:20px;color:#fecaca;line-height:1.6;margin-bottom:20px">
+      The cloud backup could not be reached. This may be due to a slow or no internet connection.<br><br>
+      <strong>Your app will open using the last data saved on this device.</strong> This data may be out of date if you recently made changes on another device.<br><br>
+      Do not rely on this information for medical decisions without first verifying it is current.
+    </div>
+    <button class="btn btn-primary" style="font-size:20px;background:#dc2626;border-color:#dc2626;width:100%;justify-content:center" onclick="dismissSyncOverlay(true)">⚠️ I Understand — Open with Local Data</button>
   </div>
 </div>
 
