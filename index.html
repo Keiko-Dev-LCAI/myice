@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MyICE ⚕️ — Personal Health Vault</title>
-<!-- v46.8 -->
+<!-- v46.9 -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -714,6 +714,13 @@ body.ob-open{overflow:hidden}
       <div class="sidebar-section-label">Quick Access</div>
       <div class="nav-item nav-emergency" data-section="emergency" onclick="showEmergency()">
         <span class="nav-icon">🚨</span> Emergency View
+      </div>
+      <div class="nav-item" id="sidebar-sync-btn" onclick="sidebarSync()" style="color:var(--accent);border-left:3px solid transparent">
+        <span class="nav-icon" id="sidebar-sync-icon">☁️</span>
+        <span style="flex:1">
+          <span style="display:block">Sync to Cloud</span>
+          <span id="sidebar-sync-status" style="font-size:18px;color:var(--text-muted)">Tap to sync</span>
+        </span>
       </div>
       <div class="nav-item" data-section="dashboard" onclick="navTo('dashboard')">
         <span class="nav-icon">🏠</span> Dashboard
@@ -2274,6 +2281,48 @@ function scheduleAutoSync() {
   }, AUTO_SYNC_DELAY);
 }
 
+function updateSidebarSync(status) {
+  const statusEl = document.getElementById('sidebar-sync-status');
+  const iconEl   = document.getElementById('sidebar-sync-icon');
+  if(!statusEl) return;
+  if(status === 'syncing') {
+    statusEl.textContent = 'Syncing…';
+    if(iconEl) iconEl.textContent = '🔄';
+  } else if(status === 'done') {
+    const acct = getAccount();
+    const t = acct && acct.lastSynced ? new Date(acct.lastSynced).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'just now';
+    statusEl.textContent = '✅ Synced ' + t;
+    if(iconEl) iconEl.textContent = '☁️';
+  } else if(status === 'error') {
+    statusEl.textContent = '⚠️ Sync failed';
+    if(iconEl) iconEl.textContent = '☁️';
+  } else {
+    const acct = getAccount();
+    if(acct && acct.lastSynced) {
+      const t = new Date(acct.lastSynced).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      statusEl.textContent = '✅ Last: ' + t;
+    } else {
+      statusEl.textContent = _sessionLoggedIn ? 'Tap to sync' : 'Login to sync';
+    }
+    if(iconEl) iconEl.textContent = '☁️';
+  }
+}
+
+async function sidebarSync() {
+  if(!_sessionLoggedIn) {
+    // Not logged in — open login modal
+    openAcctModal();
+    return;
+  }
+  updateSidebarSync('syncing');
+  try {
+    await syncToChain();
+    updateSidebarSync('done');
+  } catch(e) {
+    updateSidebarSync('error');
+  }
+}
+
 function _showSyncStatus(msg) {
   let el = document.getElementById('auto-sync-status');
   if(!el) return;
@@ -2323,6 +2372,8 @@ function isPremium() {
 // ── PIN SYSTEM ──
 function requireAuth(cb) {
   const s = getSettings();
+  // Account login always satisfies auth — no PIN asked after logging in
+  if (_sessionLoggedIn) { sessionAuth='owner'; cb(); return; }
   if (!s.ownerPin && !s.caregiverPin) { sessionAuth='owner'; cb(); return; }
   if (sessionAuth) { cb(); return; }
   pinCallback = cb;
@@ -3890,7 +3941,7 @@ function getAccount() {
   catch(e) { return null; }
 }
 function saveAccount(a) { localStorage.setItem(ACCT_KEY, JSON.stringify(a)); }
-function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null; updateAcctHeaderBtn(); }
+function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null; updateAcctHeaderBtn(); updateSidebarSync(''); }
 // Session persists within the tab — only clears when tab/browser is actually closed
 
 // ── Password Strength ─────────────────────────────────────────────────────────
@@ -4200,6 +4251,9 @@ async function pullFromChain() {
     const acct = getAccount();
     if(acct && chainData.syncedAt) { acct.lastSynced = chainData.syncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
     dismissSyncOverlay(false);
+    updateSidebarSync('done');
+    // Push local data back up (handles case where local had newer data)
+    setTimeout(() => { if(_sessionLoggedIn) syncToChain(); }, 3000);
     // Refresh current section
     const activeSection = document.querySelector('.section[style*="block"]');
     if(activeSection) showSection(activeSection.id.replace('section-',''));
@@ -4257,6 +4311,7 @@ async function syncToChain() {
       if(!_autoSyncBusy) showToast('✅ Synced to Lightchain!');
       _showSyncStatus('✅ Saved');
       setTimeout(() => _showSyncStatus(''), 3000);
+      updateSidebarSync('done');
       loadSettingsPage();
     } else {
       if(!_autoSyncBusy) showToast('Sync failed: ' + (result.error || 'Unknown error'));
@@ -4421,6 +4476,7 @@ function renderAcctSettings() {
 
 function initAccount() {
   updateAcctHeaderBtn();
+  updateSidebarSync('');
   const acct = getAccount();
   if(acct && false) { // toast removed — header lock icon is enough
   }
