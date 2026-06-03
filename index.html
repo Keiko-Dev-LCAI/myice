@@ -4181,8 +4181,8 @@ function renderAcctSettings() {
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <div style="font-size:16px;font-weight:700">👤 ${esc(acct.username)}</div>
-      ${_sessionLoggedIn ? '<span class="chain-badge">🔓 Logged in</span>' : '<span style="font-size:12px;color:var(--text-muted)">Session locked</span>'}
+      <div style="font-size:22px;font-weight:700">👤 ${esc(acct.username)}</div>
+      ${_sessionLoggedIn ? '<span class="chain-badge">🔓 Logged in</span>' : '<span style="font-size:18px;color:var(--text-muted)">Session locked — tap Unlock</span>'}
     </div>
     ${_sessionLoggedIn
       ? `<div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -4192,8 +4192,8 @@ function renderAcctSettings() {
              : '<button class="btn btn-secondary" onclick="setupBiometric()">👆 Set Up Fingerprint/Face ID</button>'}
          </div>`
       : `<button class="btn btn-primary" onclick="openAcctModal()">🔓 Unlock Session</button>`}
-    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">
-      On-chain address: <code style="font-size:11px">${acct.address}</code>
+    <div style="font-size:18px;color:var(--text-muted);margin-top:10px;word-break:break-all">
+      On-chain address: <code style="font-size:16px">${acct.address}</code>
     </div>
     ${syncedHtml}`;
 }
