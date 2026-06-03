@@ -3023,6 +3023,15 @@ function requireAuth(cb) {
   const s = getSettings();
   // Account login always satisfies auth — no PIN asked after logging in
   if (_sessionLoggedIn) { sessionAuth='owner'; cb(); return; }
+  // If an account exists, require account login — old PIN no longer bypasses this
+  const acct = getAccount();
+  if (acct) {
+    pinCallback = cb;
+    switchAcctTab('login');
+    openAcctModal();
+    return;
+  }
+  // No account set up — fall back to old PIN behavior for local-only users
   if (!s.ownerPin && !s.caregiverPin) { sessionAuth='owner'; cb(); return; }
   if (sessionAuth) { cb(); return; }
   pinCallback = cb;
@@ -3628,6 +3637,7 @@ function addLabResult() {
   const name=val('lab-name').trim(); if(!name) return;
   const items=gd('lab_results',[]); items.push({id:uid(),name,date:val('lab-date')||new Date().toISOString().slice(0,10),doctor:val('lab-doctor'),notes:val('lab-notes')});
   sd('lab_results',items); clearFields(['lab-name','lab-doctor','lab-notes']); renderLabResults();
+  auditLog('add','Lab Results','Added: '+name);
 }
 async function analyzeLab() {
   if(!isPremium()) { showUpgradeToast(); return; }
@@ -3664,6 +3674,7 @@ function addVital() {
   clearFields(['vital-sys','vital-dia','vital-hr','vital-glucose','vital-weight','vital-o2','vital-temp']);
   setVitalsDatetime();
   renderVitals();
+  auditLog('add','Vitals','Logged vitals entry');
 }
 function setVitalsRange(range,btn) {
   vitalsRange=range;
@@ -3903,6 +3914,7 @@ function addAppointment() {
   const doctor=val('appt-doctor').trim(); if(!doctor) return;
   const items=gd('appointments',[]); items.push({id:uid(),doctor,specialty:val('appt-specialty'),date:val('appt-date'),time:val('appt-time'),location:val('appt-location'),reason:val('appt-reason'),notes:val('appt-notes')});
   sd('appointments',items); clearFields(['appt-doctor','appt-specialty','appt-date','appt-time','appt-location','appt-reason','appt-notes']); renderAppointments(); populateApptSelect();
+  auditLog('add','Appointments','Added appt with '+doctor);
 }
 function switchApptTab(tab,btn) {
   document.getElementById('appt-upcoming').style.display=tab==='upcoming'?'block':'none';
@@ -3985,8 +3997,10 @@ function renderCareTeam() {
 }
 function addCareTeam() {
   const name=val('ct-name').trim(); if(!name) return;
-  const items=gd('care_team',[]); items.push({id:uid(),name,role:val('ct-role'),phone:val('ct-phone'),address:val('ct-address'),notes:val('ct-notes')});
+  const role=val('ct-role');
+  const items=gd('care_team',[]); items.push({id:uid(),name,role,phone:val('ct-phone'),address:val('ct-address'),notes:val('ct-notes')});
   sd('care_team',items); clearFields(['ct-name','ct-phone','ct-address','ct-notes']); renderCareTeam();
+  auditLog('add','Care Team','Added: '+name+(role?' ('+role+')':''));
 }
 
 // ── EMERGENCY CONTACTS ──
@@ -4014,6 +4028,7 @@ function addEmergencyContact() {
   const name=val('ec-name').trim(); if(!name) return;
   const items=gd('emergency_contacts',[]); items.push({id:uid(),name,relationship:val('ec-rel'),phone:val('ec-phone')});
   sd('emergency_contacts',items); clearFields(['ec-name','ec-phone']); document.getElementById('ec-rel').value=''; renderEmergencyContacts();
+  auditLog('add','Emergency Contacts','Added: '+name);
 }
 function moveContact(idx,dir) {
   if(!isOwner()) return;
@@ -4119,6 +4134,7 @@ function addVaccination() {
   const name=val('vax-name').trim(); if(!name) return;
   const items=gd('vaccinations',[]); items.push({id:uid(),name,date:val('vax-date'),booster:val('vax-booster'),location:val('vax-location')});
   sd('vaccinations',items); clearFields(['vax-name','vax-date','vax-booster','vax-location']); renderVaccinations();
+  auditLog('add','Vaccinations','Added: '+name);
 }
 
 // ── VISION & DENTAL ──
@@ -4163,6 +4179,7 @@ function addDevice() {
   const name=val('dev-name').trim(); if(!name) return;
   const items=gd('devices',[]); items.push({id:uid(),name,type:val('dev-type'),serial:val('dev-serial'),date:val('dev-date'),warranty:val('dev-warranty'),notes:val('dev-notes')});
   sd('devices',items); clearFields(['dev-name','dev-serial','dev-date','dev-warranty','dev-notes']); renderDevices();
+  auditLog('add','Medical Devices','Added: '+name);
 }
 
 // ── SYMPTOM JOURNAL ──
@@ -4183,6 +4200,7 @@ function addSymptom() {
   const text=val('sj-text').trim(); if(!text) return;
   const items=gd('symptoms',[]); items.push({id:uid(),text,datetime:val('sj-datetime')||new Date().toISOString().slice(0,16),severity:document.getElementById('sj-severity').value});
   sd('symptoms',items); clearFields(['sj-text']); setSymptomDatetime(); renderSymptoms();
+  auditLog('add','Symptom Journal','Logged: '+text.slice(0,60)+(text.length>60?'…':''));
 }
 async function analyzeSymptoms() {
   if(!isPremium()) { showUpgradeToast(); return; }
@@ -4223,6 +4241,7 @@ function addGoal() {
   const name=val('goal-name').trim(); if(!name) return;
   const items=gd('health_goals',[]); items.push({id:uid(),name,target:val('goal-target'),current:val('goal-current'),date:val('goal-date'),notes:val('goal-notes')});
   sd('health_goals',items); clearFields(['goal-name','goal-target','goal-current','goal-date','goal-notes']); renderGoals();
+  auditLog('add','Health Goals','Added: '+name);
 }
 
 // ── FAMILY PROFILES ──
@@ -4570,6 +4589,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
   }
+
+  // Background sync every 30 minutes while logged in
+  setInterval(() => {
+    if(_sessionLoggedIn && _sessionKey && _sessionAddr) {
+      syncToChain().catch(()=>{});
+    }
+  }, 30 * 60 * 1000);
 });
 
 // keyboard PIN entry
