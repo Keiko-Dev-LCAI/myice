@@ -606,6 +606,42 @@ body.ob-open{overflow:hidden}
   </div>
 </div>
 
+<!-- ═══════════════════ IDENTITY MODAL ═══════════════════ -->
+<div id="identity-modal" style="position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:601;display:none;align-items:center;justify-content:center">
+  <div class="pin-dialog" style="width:340px;max-width:95vw">
+    <div style="font-size:48px;margin-bottom:6px">👋</div>
+    <h2 style="font-size:36px;margin-bottom:6px">Who are you?</h2>
+    <p style="font-size:24px;color:var(--text-secondary);margin-bottom:8px">Enter your PIN to identify yourself</p>
+    <div id="identity-name-display" style="font-size:30px;font-weight:800;color:var(--accent);min-height:38px;margin-bottom:12px;transition:all 0.2s"></div>
+    <div class="pin-dots" id="id-dots">
+      <div class="pin-dot" id="iddot-0"></div>
+      <div class="pin-dot" id="iddot-1"></div>
+      <div class="pin-dot" id="iddot-2"></div>
+      <div class="pin-dot" id="iddot-3"></div>
+      <div class="pin-dot" id="iddot-4"></div>
+      <div class="pin-dot" id="iddot-5"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="idPinPress('1')">1</button>
+      <button class="pin-key" onclick="idPinPress('2')">2</button>
+      <button class="pin-key" onclick="idPinPress('3')">3</button>
+      <button class="pin-key" onclick="idPinPress('4')">4</button>
+      <button class="pin-key" onclick="idPinPress('5')">5</button>
+      <button class="pin-key" onclick="idPinPress('6')">6</button>
+      <button class="pin-key" onclick="idPinPress('7')">7</button>
+      <button class="pin-key" onclick="idPinPress('8')">8</button>
+      <button class="pin-key" onclick="idPinPress('9')">9</button>
+      <button class="pin-key" onclick="idPinPress('clr')" style="font-size:13px;color:var(--text-muted)">CLR</button>
+      <button class="pin-key" onclick="idPinPress('0')">0</button>
+      <button class="pin-key" onclick="idPinPress('del')" style="font-size:15px">⌫</button>
+    </div>
+    <div id="identity-error" style="color:var(--emergency);font-size:22px;min-height:28px;margin-top:8px"></div>
+    <div style="margin-top:14px">
+      <button onclick="identitySkip()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;text-decoration:underline;font-family:inherit">Continue without identifying</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ ACCOUNT MODAL ═══════════════════ -->
 <div class="acct-overlay" id="acct-overlay">
   <div class="acct-dialog">
@@ -1910,6 +1946,34 @@ body.ob-open{overflow:hidden}
     </div>
   </div>
   <div class="card">
+    <div class="card-title">👥 Who Has Access</div>
+    <p style="font-size:20px;color:var(--text-secondary);margin-bottom:16px">Everyone logs in with the same account password. Each person gets their own PIN — used only to identify who made changes in the Access Log.</p>
+    <div id="identities-list" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="flex:2;min-width:140px">
+        <label>Name (e.g. Keiko, Nurse Jones)</label>
+        <input class="input" id="new-identity-name" placeholder="e.g. Nurse Jones">
+      </div>
+      <div class="form-group" style="width:130px">
+        <label>PIN (4–6 digits)</label>
+        <input class="input" id="new-identity-pin" type="password" placeholder="••••" maxlength="6">
+      </div>
+      <button class="btn btn-primary" onclick="addIdentity()" style="margin-bottom:12px">+ Add Person</button>
+    </div>
+    <div id="identity-msg" style="font-size:20px;min-height:24px;margin-top:4px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Access Log</div>
+    <p style="font-size:20px;color:var(--text-secondary);margin-bottom:16px">Every login and data change — who did it and when.</p>
+    <div id="audit-log-list" style="max-height:400px;overflow-y:auto"></div>
+    <div style="margin-top:12px;display:flex;gap:10px">
+      <button class="btn btn-secondary btn-sm" onclick="renderAuditLog()">🔄 Refresh</button>
+      <button class="btn btn-danger btn-sm" onclick="clearAuditLog()">🗑️ Clear Log</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">⭐ Subscription</div>
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
@@ -2260,6 +2324,216 @@ let _lcaiPrice = null, _lcaiPriceTs = 0;
 
 let activeProfileId = 'default';
 let sessionAuth = null; // null | 'owner' | 'caregiver'
+let _currentIdentityId   = '';
+let _currentIdentityName = '';
+
+// ── SESSION STORAGE (survives page refresh, cleared on tab close) ─────────────
+const SESSION_STORAGE_KEY = 'myice_session';
+
+async function saveSessionToStorage() {
+  if(!_sessionKey || !_sessionAddr) return;
+  try {
+    const keyBytes = await crypto.subtle.exportKey('raw', _sessionKey);
+    const keyHex = Array.from(new Uint8Array(keyBytes)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+      keyHex, address: _sessionAddr,
+      identityId: _currentIdentityId,
+      identityName: _currentIdentityName,
+      savedAt: Date.now()
+    }));
+  } catch(e) { console.log('[session] save failed:', e); }
+}
+
+async function restoreSessionFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if(!raw) return false;
+    const data = JSON.parse(raw);
+    if(!data.keyHex || !data.address) return false;
+    const keyBytes = new Uint8Array(data.keyHex.match(/.{2}/g).map(h=>parseInt(h,16)));
+    const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
+    _sessionKey          = aesKey;
+    _sessionAddr         = data.address;
+    _sessionLoggedIn     = true;
+    sessionAuth          = 'owner';
+    _currentIdentityId   = data.identityId   || '';
+    _currentIdentityName = data.identityName || '';
+    return true;
+  } catch(e) {
+    console.log('[session] restore failed:', e);
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    return false;
+  }
+}
+
+function clearSessionStorage() { sessionStorage.removeItem(SESSION_STORAGE_KEY); }
+
+// ── IDENTITY SYSTEM ───────────────────────────────────────────────────────────
+const IDENTITIES_KEY = 'myice_identities';
+
+function getIdentities() {
+  try { const v=localStorage.getItem(IDENTITIES_KEY); return v ? JSON.parse(v) : []; }
+  catch(e) { return []; }
+}
+function saveIdentities(ids) { localStorage.setItem(IDENTITIES_KEY, JSON.stringify(ids)); }
+
+let _idPinBuffer  = '';
+let _identityCallback = null;
+
+function showIdentityModal(cb) {
+  _identityCallback = cb;
+  _idPinBuffer = '';
+  updateIdDots();
+  document.getElementById('identity-error').textContent = '';
+  document.getElementById('identity-name-display').textContent = '';
+  document.getElementById('identity-modal').style.display = 'flex';
+}
+
+function closeIdentityModal() {
+  document.getElementById('identity-modal').style.display = 'none';
+  _idPinBuffer = '';
+}
+
+function updateIdDots() {
+  for(let i=0;i<6;i++) {
+    const dot=document.getElementById('iddot-'+i);
+    if(dot) dot.classList.toggle('filled', i < _idPinBuffer.length);
+  }
+}
+
+function idPinPress(k) {
+  if(k==='clr') { _idPinBuffer=''; updateIdDots(); document.getElementById('identity-name-display').textContent=''; return; }
+  if(k==='del') { _idPinBuffer=_idPinBuffer.slice(0,-1); updateIdDots(); return; }
+  if(_idPinBuffer.length>=6) return;
+  _idPinBuffer += k;
+  updateIdDots();
+  // Check for match
+  const ids = getIdentities();
+  const match = ids.find(id => id.pin === _idPinBuffer);
+  const nameEl = document.getElementById('identity-name-display');
+  if(match) {
+    nameEl.textContent = '✅ ' + match.name;
+    setTimeout(() => {
+      _currentIdentityId   = match.id;
+      _currentIdentityName = match.name;
+      saveSessionToStorage();
+      auditLog('login', 'Account', 'Identified as ' + match.name);
+      closeIdentityModal();
+      if(_identityCallback) { const cb=_identityCallback; _identityCallback=null; cb(); }
+    }, 600);
+  } else {
+    // Show partial match hint if any identity starts with this prefix
+    const partial = ids.find(id => id.pin.startsWith(_idPinBuffer));
+    nameEl.textContent = partial ? '👤 ' + partial.name + '…' : '';
+  }
+}
+
+function identitySkip() {
+  _currentIdentityId   = 'unknown';
+  _currentIdentityName = 'Unknown';
+  saveSessionToStorage();
+  auditLog('login', 'Account', 'Logged in without identifying');
+  closeIdentityModal();
+  if(_identityCallback) { const cb=_identityCallback; _identityCallback=null; cb(); }
+}
+
+function addIdentity() {
+  const name = document.getElementById('new-identity-name').value.trim();
+  const pin  = document.getElementById('new-identity-pin').value.trim();
+  const msg  = document.getElementById('identity-msg');
+  if(!name) { msg.style.color='var(--emergency)'; msg.textContent='Enter a name.'; return; }
+  if(!pin || pin.length < 4 || !/^\d+$/.test(pin)) { msg.style.color='var(--emergency)'; msg.textContent='PIN must be 4–6 digits.'; return; }
+  const ids = getIdentities();
+  if(ids.find(id => id.pin === pin)) { msg.style.color='var(--emergency)'; msg.textContent='That PIN is already taken.'; return; }
+  ids.push({ id: uid(), name, pin });
+  saveIdentities(ids);
+  document.getElementById('new-identity-name').value='';
+  document.getElementById('new-identity-pin').value='';
+  msg.style.color='var(--success)'; msg.textContent=name+' added. ✓';
+  renderIdentitiesList();
+}
+
+function removeIdentity(id) {
+  if(!confirm('Remove this person from the access list?')) return;
+  const ids = getIdentities().filter(x=>x.id!==id);
+  saveIdentities(ids);
+  renderIdentitiesList();
+}
+
+function renderIdentitiesList() {
+  const el = document.getElementById('identities-list');
+  if(!el) return;
+  const ids = getIdentities();
+  if(!ids.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:20px;padding:12px 0">No people added yet. Add yourself first.</div>';
+    return;
+  }
+  el.innerHTML = ids.map(id => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-hover);border-radius:8px;margin-bottom:8px">
+      <div style="font-size:28px">👤</div>
+      <div style="flex:1">
+        <div style="font-size:24px;font-weight:700">${esc(id.name)}</div>
+        <div style="font-size:18px;color:var(--text-muted)">PIN: ${'•'.repeat(id.pin.length)}</div>
+      </div>
+      <button onclick="removeIdentity('${id.id}')" class="btn btn-danger btn-sm">Remove</button>
+    </div>
+  `).join('');
+}
+
+// ── AUDIT LOG ─────────────────────────────────────────────────────────────────
+const AUDIT_KEY = 'myice_audit';
+
+function getAuditLog() {
+  try { const v=localStorage.getItem(AUDIT_KEY); return v ? JSON.parse(v) : []; }
+  catch(e) { return []; }
+}
+
+function auditLog(action, section, detail) {
+  try {
+    const entries = getAuditLog();
+    entries.unshift({
+      ts:           Date.now(),
+      identityName: _currentIdentityName || 'Unknown',
+      action,
+      section,
+      detail: detail || ''
+    });
+    if(entries.length > 200) entries.splice(200);
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(entries));
+  } catch(e) {}
+}
+
+function renderAuditLog() {
+  const el = document.getElementById('audit-log-list');
+  if(!el) return;
+  const entries = getAuditLog();
+  if(!entries.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:20px;padding:12px 0">No activity recorded yet.</div>';
+    return;
+  }
+  const actionIcon = {login:'🔑',logout:'🚪',add:'➕',edit:'✏️',delete:'🗑️',sync:'☁️'};
+  el.innerHTML = entries.map(e => {
+    const d    = new Date(e.ts);
+    const time = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' +
+                 d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const icon = actionIcon[e.action] || '📝';
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px;flex-shrink:0">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:20px;font-weight:700">${esc(e.identityName)} <span style="font-weight:400;color:var(--text-secondary)">— ${esc(e.action)} ${esc(e.section)}</span></div>
+        <div style="font-size:18px;color:var(--text-muted)">${esc(e.detail)}</div>
+        <div style="font-size:16px;color:var(--text-muted)">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearAuditLog() {
+  if(!confirm('Clear the entire access log? This cannot be undone.')) return;
+  localStorage.removeItem(AUDIT_KEY);
+  renderAuditLog();
+  auditLog('delete', 'Access Log', 'Log cleared');
+}
 
 // ── AUTO-SYNC ENGINE ─────────────────────────────────────────────────────────
 let _autoSyncTimer   = null;
@@ -2793,6 +3067,7 @@ function addCondition() {
   const name=val('cond-name').trim(); if(!name) return;
   const items=gd('conditions',[]); items.push({id:uid(),name,year:val('cond-year'),status:val('cond-status'),emergencyVisible:true});
   sd('conditions',items); clearFields(['cond-name','cond-year']); renderConditions();
+  auditLog('add', 'Conditions', 'Added: ' + name);
 }
 function toggleCondVis(id,btn) {
   const items=gd('conditions',[]); const c=items.find(x=>x.id===id);
@@ -2831,8 +3106,10 @@ function renderMedications() {
 function addMedication() {
   const name=val('med-name').trim(); if(!name) return;
   const doctorRaw = val('med-doctor').trim().replace(/^dr\.?\s*/i,'');
-  const items=gd('medications',[]); items.push({id:uid(),name,dose:val('med-dose'),route:val('med-route'),freq:val('med-freq'),doctor:doctorRaw,emergencyVisible:true});
+  const dose=val('med-dose');
+  const items=gd('medications',[]); items.push({id:uid(),name,dose,route:val('med-route'),freq:val('med-freq'),doctor:doctorRaw,emergencyVisible:true});
   sd('medications',items); clearFields(['med-name','med-dose','med-freq','med-doctor']); renderMedications();
+  auditLog('add', 'Medications', 'Added: ' + name + (dose ? ' ' + dose : ''));
 }
 function toggleMedVis(id,btn) {
   const items=gd('medications',[]); const m=items.find(x=>x.id===id);
@@ -2897,8 +3174,10 @@ function renderAllergies() {
 }
 function addAllergy() {
   const name=val('allergy-name').trim(); if(!name) return;
-  const items=gd('allergies',[]); items.push({id:uid(),name,type:val('allergy-type'),severity:val('allergy-severity'),reaction:val('allergy-reaction'),emergencyVisible:true});
+  const severity=val('allergy-severity');
+  const items=gd('allergies',[]); items.push({id:uid(),name,type:val('allergy-type'),severity,reaction:val('allergy-reaction'),emergencyVisible:true});
   sd('allergies',items); clearFields(['allergy-name','allergy-reaction']); renderAllergies();
+  auditLog('add', 'Allergies', 'Added: ' + name + (severity ? ' (' + severity + ')' : ''));
 }
 function toggleAllergyVis(id,btn) {
   const items=gd('allergies',[]); const a=items.find(x=>x.id===id);
@@ -3610,6 +3889,8 @@ function loadSettingsPage() {
     btnEl.textContent = '⭐ Upgrade to Premium — $3/month in LCAI';
   }
   renderAcctSettings();
+  renderIdentitiesList();
+  renderAuditLog();
 }
 function saveOwnerPin() {
   const pin=document.getElementById('owner-pin-input').value;
@@ -3771,7 +4052,11 @@ function clearAllData() {
 function deleteItem(storageKey,id,refreshFn) {
   if(!isOwner()) return;
   if(!confirm('Delete this entry?')) return;
-  sd(storageKey,gd(storageKey,[]).filter(x=>x.id!==id));
+  const items = gd(storageKey,[]);
+  const item  = items.find(x=>x.id===id);
+  const label = item ? (item.name||item.title||item.test||item.vaccine||item.drug||'entry') : 'entry';
+  sd(storageKey, items.filter(x=>x.id!==id));
+  auditLog('delete', storageKey.replace(/_/g,' '), 'Deleted: ' + label);
   if(typeof refreshFn==='function') refreshFn();
 }
 
@@ -3850,7 +4135,25 @@ function obFinish() {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => { init(); initAccount(); checkOnboarding(); });
+window.addEventListener('DOMContentLoaded', async () => {
+  // Try to restore session from sessionStorage first (survives page refresh)
+  const restored = await restoreSessionFromStorage();
+  init();
+  initAccount();
+  checkOnboarding();
+  if(restored) {
+    // Session restored — skip login, update UI
+    updateAcctHeaderBtn();
+    updateSidebarSync('');
+    // If identity already known, proceed silently; otherwise show identity modal
+    if(!_currentIdentityName) {
+      const ids = getIdentities();
+      if(ids.length > 0) {
+        showIdentityModal(() => { showSection('dashboard'); });
+      }
+    }
+  }
+});
 
 // keyboard PIN entry
 document.addEventListener('keydown', e=>{
@@ -3941,7 +4244,13 @@ function getAccount() {
   catch(e) { return null; }
 }
 function saveAccount(a) { localStorage.setItem(ACCT_KEY, JSON.stringify(a)); }
-function clearSession() { _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null; updateAcctHeaderBtn(); updateSidebarSync(''); }
+function clearSession() {
+  _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null;
+  _currentIdentityId = ''; _currentIdentityName = '';
+  clearSessionStorage();
+  updateAcctHeaderBtn(); updateSidebarSync('');
+  auditLog('logout', 'Account', 'Logged out');
+}
 // Session persists within the tab — only clears when tab/browser is actually closed
 
 // ── Password Strength ─────────────────────────────────────────────────────────
@@ -3993,15 +4302,25 @@ async function doCreateAccount() {
     _sessionKey = aesKey;
     _sessionAddr = address;
     _sessionLoggedIn = true;
+    sessionAuth = 'owner';
+    await saveSessionToStorage();
 
     errEl.textContent = '';
     closeAcctModal();
     updateAcctHeaderBtn();
     loadSettingsPage();
+    auditLog('login', 'Account', 'Account created as ' + username);
     showToast('✅ Account created! Your health data is now secured.');
 
-    // Offer biometric setup
-    if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+    const ids = getIdentities();
+    if(ids.length > 0) {
+      showIdentityModal(() => {
+        if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+      });
+    } else {
+      // Offer biometric setup
+      if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 600);
+    }
   } catch(e) {
     errEl.textContent = 'Error creating account. Please try again.';
     console.error(e);
@@ -4037,11 +4356,18 @@ async function doLogin() {
       _sessionLoggedIn = true;
       sessionAuth = 'owner';
       if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
+      await saveSessionToStorage();
       closeAcctModal();
       updateAcctHeaderBtn();
       loadSettingsPage();
-      // Always pull from chain — if no record exists, toast will say so
-      setTimeout(pullFromChain, 600);
+      auditLog('login', 'Account', 'Logged in on new device as ' + username);
+      const ids = getIdentities();
+      if(ids.length > 0) {
+        showIdentityModal(() => { setTimeout(pullFromChain, 400); });
+      } else {
+        // Always pull from chain — if no record exists, toast will say so
+        setTimeout(pullFromChain, 600);
+      }
     } catch(e) {
       errEl.textContent = 'Login failed. Please try again.';
     }
@@ -4062,15 +4388,24 @@ async function doLogin() {
     // Account login also satisfies PIN requirement — no second login needed
     sessionAuth = 'owner';
     if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
+    await saveSessionToStorage();
     closeAcctModal();
     updateAcctHeaderBtn();
     loadSettingsPage();
-    if(_syncAfterLogin) {
-      _syncAfterLogin = false;
-      setTimeout(syncToChain, 400);
+    auditLog('login', 'Account', 'Logged in as ' + acct.username);
+    const doSync = () => {
+      if(_syncAfterLogin) {
+        _syncAfterLogin = false;
+        setTimeout(syncToChain, 400);
+      } else {
+        setTimeout(pullFromChain, 600);
+      }
+    };
+    const ids = getIdentities();
+    if(ids.length > 0) {
+      showIdentityModal(() => { doSync(); });
     } else {
-      // Pull latest data from cloud on every login
-      setTimeout(pullFromChain, 600);
+      doSync();
     }
   } catch(e) {
     errEl.textContent = 'Login failed. Please try again.';
