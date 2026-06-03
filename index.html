@@ -2582,7 +2582,7 @@ async function checkInteractions() {
   if(!isPremium()) { showUpgradeToast(); return; }
   const meds=gd('medications',[]); if(!meds.length) { showInfo('interaction-result','No medications to check.'); return; }
   const conds=gd('conditions',[]);
-  showInfo('interaction-result','<div style="display:flex;align-items:center;gap:8px">⏳ Checking interactions — this may take up to 60 seconds...</div>');
+  showInfo('interaction-result','<div style="display:flex;align-items:center;gap:8px">⏳ Checking interactions — this may take up to 2 minutes...</div>');
   try {
     const r=await fetch(`${BACKEND}/api/check-interactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({medications:meds,conditions:conds})});
     const d=await r.json();
@@ -2598,7 +2598,7 @@ async function explainMed(id) {
   const conds=gd('conditions',[]);
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:16px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 60 seconds...</div></div>`;
+  modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:16px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 2 minutes...</div></div>`;
   document.body.appendChild(modal);
   try {
     const r=await fetch(`${BACKEND}/api/explain-medication`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,dosage:m.dose||'',route:m.route||'',conditions:conds})});
@@ -2674,7 +2674,7 @@ async function analyzeLab() {
   const notes=val('lab-notes').trim(); if(!notes) { alert('Enter lab values in the notes field first.'); return; }
   const testName=val('lab-name')||'Lab Result';
   const conds=gd('conditions',[]); const meds=gd('medications',[]);
-  showInfo('lab-ai-result','⏳ Analyzing your lab results — this may take up to 60 seconds...');
+  showInfo('lab-ai-result','⏳ Analyzing your lab results — this may take up to 2 minutes...');
   try {
     const r=await fetch(`${BACKEND}/api/analyze-labs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:notes,testName,conditions:conds,medications:meds})});
     const d=await r.json();
@@ -2806,7 +2806,7 @@ async function analyzeDocument() {
   const docName=val('doc-name')||'Medical Document';
   const docNotes=val('doc-notes').trim();
   if(!docNotes) { alert('Enter document text or paste the document contents in the Notes field first.'); return; }
-  showInfo('doc-ai-result','⏳ Analyzing document — this may take up to 60 seconds...');
+  showInfo('doc-ai-result','⏳ Analyzing document — this may take up to 2 minutes...');
   try {
     const r=await fetch(`${BACKEND}/api/analyze-document`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:docNotes,name:docName})});
     const d=await r.json();
@@ -2871,7 +2871,7 @@ async function processImportFile(file) {
   if(!isPremium()) { showUpgradeToast(); return; }
   const maxMB = 5;
   if(file.size > maxMB * 1024 * 1024) { alert(`File too large. Please keep imports under ${maxMB}MB.`); return; }
-  showInfo('import-ai-result','<div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--accent-dim);border-radius:8px">⏳ Reading your file and running AI analysis — this may take up to 60 seconds...</div>');
+  showInfo('import-ai-result','<div style="display:flex;align-items:center;gap:10px;padding:16px;background:var(--accent-dim);border-radius:8px">⏳ Reading your file and running AI analysis — this may take up to 2 minutes...</div>');
   try {
     let text = '';
     if(file.name.toLowerCase().endsWith('.xml') || file.name.toLowerCase().endsWith('.ccda')) {
@@ -2992,7 +2992,7 @@ async function suggestQuestions() {
   const apptId=val('q-appt'); const appts=gd('appointments',[]);
   const appt=appts.find(a=>a.id===apptId)||{};
   const labs=gd('lab_results',[]).slice(-5);
-  showInfo('q-ai-result','⏳ Generating personalized questions — up to 60 seconds...');
+  showInfo('q-ai-result','⏳ Generating personalized questions — up to 2 minutes...');
   try {
     const r=await fetch(`${BACKEND}/api/suggest-questions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conditions:conds,medications:meds,appointment:appt,recentLabs:labs})});
     const d=await r.json();
@@ -3228,7 +3228,7 @@ async function analyzeSymptoms() {
   if(!isPremium()) { showUpgradeToast(); return; }
   const items=gd('symptoms',[]); if(!items.length) { alert('Log some symptoms first.'); return; }
   const conds=gd('conditions',[]); const meds=gd('medications',[]);
-  showInfo('sj-ai-result','⏳ Analyzing your symptom patterns — up to 60 seconds...');
+  showInfo('sj-ai-result','⏳ Analyzing your symptom patterns — up to 2 minutes...');
   try {
     const r=await fetch(`${BACKEND}/api/analyze-symptoms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symptoms:items,conditions:conds,medications:meds})});
     const d=await r.json();
