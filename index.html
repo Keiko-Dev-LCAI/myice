@@ -4096,10 +4096,24 @@ function showSyncOverlay() {
 }
 
 function dismissSyncOverlay(stale) {
-  const el = document.getElementById('sync-loading-overlay');
-  if(el) el.style.display = 'none';
-  const banner = document.getElementById('stale-data-banner');
-  if(banner) banner.style.display = stale ? 'block' : 'none';
+  if(stale) {
+    const el = document.getElementById('sync-loading-overlay');
+    if(el) el.style.display = 'none';
+    const banner = document.getElementById('stale-data-banner');
+    if(banner) banner.style.display = 'block';
+  } else {
+    // Show success state for 4 seconds so user can read it
+    const title = document.getElementById('sync-loading-title');
+    const msg   = document.getElementById('sync-loading-msg');
+    const spinner = document.querySelector('#sync-loading-overlay [style*="spin"]');
+    if(title) title.textContent = '✅ Your Data Is Current';
+    if(msg)   msg.innerHTML = 'Your health records have been loaded from the blockchain and are up to date.<br><br><strong style="color:var(--accent)">You may now use the app.</strong>';
+    if(spinner) spinner.style.display = 'none';
+    setTimeout(() => {
+      const el = document.getElementById('sync-loading-overlay');
+      if(el) el.style.display = 'none';
+    }, 4000);
+  }
 }
 
 async function pullFromChain() {
