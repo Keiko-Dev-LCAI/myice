@@ -2520,7 +2520,7 @@ async function restoreSessionFromStorage() {
     const data = JSON.parse(raw);
     if(!data.keyHex || !data.address) return false;
     const keyBytes = new Uint8Array(data.keyHex.match(/.{2}/g).map(h=>parseInt(h,16)));
-    const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
+    const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM',length:256}, true, ['encrypt','decrypt']);
     _sessionKey          = aesKey;
     _sessionAddr         = data.address;
     _sessionLoggedIn     = true;
@@ -4706,7 +4706,7 @@ async function deriveAESKey(password, username) {
   const { keyMat, salt } = await deriveKeyMaterial(password, username);
   return crypto.subtle.deriveKey(
     { name:'PBKDF2', salt, iterations:100000, hash:'SHA-256' },
-    keyMat, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']
+    keyMat, { name:'AES-GCM', length:256 }, true, ['encrypt','decrypt']
   );
 }
 
