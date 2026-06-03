@@ -3392,6 +3392,14 @@ function showUpgradeToast() { alert('🔒 This feature requires Premium.\n\nUpgr
 
 // ── INIT ──
 function init() {
+  // Owner mode URL activation: visiting app with ?owner=1 sets permanent Premium
+  const _params = new URLSearchParams(window.location.search);
+  if (_params.get('owner') === '1') {
+    const s = getSettings(); s.isPremium = true; saveSettings(s);
+    history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => alert('⭐ Owner mode activated — Premium unlocked forever!'), 800);
+  }
+
   // Load profile name
   const profile=gd('profile',{});
   if(profile.name) document.getElementById('active-profile-name').textContent=profile.name;
