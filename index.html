@@ -407,10 +407,10 @@ body.ob-open{overflow:hidden}
 .bio-btn{width:100%;padding:14px;background:var(--bg-secondary);border:2px dashed var(--border);border-radius:10px;color:var(--text-secondary);font-size:32px;cursor:pointer;transition:all 0.15s;font-family:inherit;font-weight:600}
 .bio-btn:hover{border-color:var(--accent);color:var(--accent)}
 .bio-btn.enrolled{border-style:solid;border-color:var(--success);color:var(--success)}
-.sync-btn{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);padding:8px 16px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:6px}
+.sync-btn{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent);padding:12px 20px;border-radius:8px;font-size:20px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.15s;display:flex;align-items:center;gap:8px}
 .sync-btn:hover{background:rgba(0,180,216,0.2)}
-.sync-status{font-size:11px;color:var(--text-muted);margin-top:4px}
-.chain-badge{font-size:11px;background:rgba(46,160,67,0.15);color:var(--success);border:1px solid rgba(46,160,67,0.3);border-radius:10px;padding:2px 8px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.sync-status{font-size:18px;color:var(--text-muted);margin-top:8px}
+.chain-badge{font-size:18px;background:rgba(46,160,67,0.15);color:var(--success);border:1px solid rgba(46,160,67,0.3);border-radius:10px;padding:4px 12px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -4173,9 +4173,10 @@ function renderAcctSettings() {
         <div class="sync-status">Last synced: ${lastSync}</div>
         ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
        </div>`
-    : `<div style="margin-top:14px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:13px;color:var(--text-muted)">
+    : `<div style="margin-top:14px;padding:12px;background:var(--bg-secondary);border-radius:8px;font-size:20px;color:var(--text-secondary)">
         ⭐ <strong>Premium</strong> — Cloud sync (cross-device backup) requires Premium ($3/month).
-       </div>`;
+       </div>`
+;
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
