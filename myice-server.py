@@ -674,6 +674,26 @@ def chat():
         names = [a.get("name", "") for a in context["allergies"] if a.get("name")]
         if names:
             context_parts.append(f"Allergies: {', '.join(names)}.")
+    if context.get("careTeam"):
+        entries = []
+        for p in context["careTeam"]:
+            if p.get("name"):
+                entry = f"{p.get('name')} ({p.get('role','Doctor')})"
+                if p.get("phone"):
+                    entry += f" phone: {p['phone']}"
+                entries.append(entry)
+        if entries:
+            context_parts.append(f"Care team: {'; '.join(entries)}.")
+    if context.get("emergencyContacts"):
+        entries = []
+        for c in context["emergencyContacts"]:
+            if c.get("name"):
+                entry = f"{c.get('name')} ({c.get('relationship','Contact')})"
+                if c.get("phone"):
+                    entry += f" phone: {c['phone']}"
+                entries.append(entry)
+        if entries:
+            context_parts.append(f"Emergency contacts: {'; '.join(entries)}.")
 
     context_block = ("\n\nPatient health context:\n" + " ".join(context_parts)) if context_parts else ""
 
@@ -682,7 +702,11 @@ def chat():
         "You are MyICE Health Assistant — a helpful, compassionate health information companion. "
         "You help patients understand general health information and prepare better questions for their doctor visits. "
         "You do NOT diagnose, prescribe, or give personalized medical advice — ever. "
-        "You provide general background information only, always directing the patient to their healthcare provider for anything specific."
+        "You provide general background information only, always directing the patient to their healthcare provider for anything specific.\n\n"
+        "IMPORTANT — Phone number formatting: If the patient asks for a phone number and it is available in their health context, "
+        "respond with the name and number clearly, formatted like this: [CALL:name:number] — for example: [CALL:Dr. Jones:555-1234]. "
+        "The app will convert this into a tap-to-call button automatically. "
+        "If the number is not in their records, tell them politely and suggest they add it in the Care Team or Emergency Contacts section."
         + context_block
         + f"\n\nPatient question: {message}\n\n"
         "Provide helpful general background information. If the question requires a personal medical assessment, "
