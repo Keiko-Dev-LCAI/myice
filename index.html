@@ -3955,10 +3955,10 @@ async function doLogin() {
     loadSettingsPage();
     if(_syncAfterLogin) {
       _syncAfterLogin = false;
-      showToast('🔓 Logged in — syncing now…');
       setTimeout(syncToChain, 400);
     } else {
-      showToast('🔓 Logged in successfully.');
+      // Pull latest data from cloud on every login
+      setTimeout(pullFromChain, 600);
     }
   } catch(e) {
     errEl.textContent = 'Login failed. Please try again.';
@@ -4058,7 +4058,38 @@ function buildPrivatePayload() {
   const data = {};
   keys.forEach(k => { const v = localStorage.getItem(pk(k)); if(v) data[k] = v; });
   data.settings = localStorage.getItem(`${STORAGE_PREFIX}settings`);
+  data.syncedAt = Date.now(); // timestamp for cross-device conflict resolution
   return JSON.stringify(data);
+}
+
+async function pullFromChain() {
+  // Called after login — pull cloud data and restore if newer than local
+  if(!_sessionKey || !_sessionAddr) return;
+  try {
+    showToast('☁️ Checking cloud backup…');
+    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}`);
+    const data = await resp.json();
+    if(!data.hasRecord || !data.privateData) { showToast('No cloud backup found — start adding your data!'); return; }
+    const chainData = await decryptData(_sessionKey, data.privateData);
+    const acct = getAccount();
+    const localSyncedAt = acct && acct.lastSynced ? acct.lastSynced : 0;
+    const chainSyncedAt = chainData.syncedAt || 0;
+    if(chainSyncedAt <= localSyncedAt) {
+      showToast('✅ Local data is up to date');
+      return;
+    }
+    // Chain is newer — restore all keys
+    const keys = ['profile','conditions','medications','allergies','vitals','lab_results',
+                   'documents','appointments','care_team','emergency_contacts','billing',
+                   'history','vaccinations','vision','devices','symptoms','goals','family_profiles'];
+    keys.forEach(k => { if(chainData[k]) _origSetItem(pk(k), chainData[k]); });
+    showToast('✅ Data loaded from cloud backup!');
+    // Refresh whatever section is currently showing
+    const activeSection = document.querySelector('.section[style*="block"]');
+    if(activeSection) showSection(activeSection.id.replace('section-',''));
+  } catch(e) {
+    console.log('[pullFromChain] error:', e.message);
+  }
 }
 
 async function syncToChain() {
