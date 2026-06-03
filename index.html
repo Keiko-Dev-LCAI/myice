@@ -1823,9 +1823,9 @@ body.ob-open{overflow:hidden}
 <div class="section" id="section-settings">
   <div class="section-title"><span class="title-icon">⚙️</span> Settings</div>
 
-  <!-- ── ACCOUNT & CLOUD SYNC (top) ── -->
+  <!-- ── CLOUD SYNC (top) ── -->
   <div class="card" id="acct-settings-card-top">
-    <div class="card-title">🔐 Account & Cloud Sync</div>
+    <div class="card-title">☁️ Cloud Sync</div>
     <div id="acct-settings-content">
       <!-- filled by JS -->
     </div>
@@ -3476,6 +3476,7 @@ function loadSettingsPage() {
     statusEl.style.color = 'var(--text-secondary)';
     btnEl.textContent = '⭐ Upgrade to Premium — $3/month in LCAI';
   }
+  renderAcctSettings();
 }
 function saveOwnerPin() {
   const pin=document.getElementById('owner-pin-input').value;
@@ -4160,11 +4161,11 @@ function renderAcctSettings() {
 
   if(!acct) {
     el.innerHTML = `
-      <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
+      <p style="font-size:20px;color:var(--text-secondary);margin-bottom:20px;line-height:1.5">
         Create a secure account to enable cloud backup and cross-device access (Premium feature).
         Your data is encrypted with your password before leaving your device.
       </p>
-      <button class="btn btn-primary" onclick="openAcctModal()">🔐 Create Account / Login</button>`;
+      <button class="btn btn-primary" style="font-size:20px;padding:14px 24px">🔐 Create Account / Login</button>`;
     return;
   }
 
@@ -4208,12 +4209,7 @@ function initAccount() {
   setTimeout(loadFromChain, 2000);
 }
 
-// Override loadSettingsPage to also render account settings
-const _origLoadSettings = loadSettingsPage;
-function loadSettingsPage() {
-  _origLoadSettings();
-  renderAcctSettings();
-}
+// renderAcctSettings() is called directly inside loadSettingsPage() above
 
 function showToast(msg) {
   let t = document.getElementById('toast-msg');
