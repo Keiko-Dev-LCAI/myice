@@ -3947,6 +3947,9 @@ async function doLogin() {
     _sessionKey = await deriveAESKey(password, acct.username);
     _sessionAddr = acct.address;
     _sessionLoggedIn = true;
+    // Account login also satisfies PIN requirement — no second login needed
+    sessionAuth = 'owner';
+    if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
     closeAcctModal();
     updateAcctHeaderBtn();
     loadSettingsPage();
