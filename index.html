@@ -2110,7 +2110,7 @@ function fmt(date) {
   catch(e) { return date; }
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function isPremium() { return true; /* AI is free for all users — payment system coming later */}
+function isPremium() { return getSettings().isPremium; }
 
 // ── PIN SYSTEM ──
 function requireAuth(cb) {
