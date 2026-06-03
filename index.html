@@ -1011,20 +1011,37 @@ body.ob-open{overflow:hidden}
   </div>
 
   <div class="card">
-    <div class="card-title" style="font-size:24px">🤖 AI Health Assistant</div>
-    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
-      MyICE includes an AI health assistant powered by Lightchain AI — a decentralized AI network. The AI is available to <strong style="color:var(--text-primary)">Premium subscribers</strong> and can help you:<br>
+    <div class="card-title" style="font-size:24px">🆓 What's Free — and What Requires Premium</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-bottom:14px">
+      Most of MyICE is completely free. You never need to pay to store and view your health information.
     </p>
-    <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
-      <li>Understand what a medication is used for and how it works</li>
-      <li>Check whether your medications might interact with each other</li>
-      <li>Understand your lab results in plain English</li>
-      <li>Analyze patterns in your symptom journal</li>
-      <li>Generate questions to ask your doctor before an appointment</li>
-      <li>Read and summarize uploaded medical documents</li>
-    </ul>
-    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:12px">
-      <strong style="color:var(--emergency)">Important:</strong> The AI provides general background information only. It is not a doctor and does not give medical advice. Always check with your doctor or pharmacist before changing anything about your health care. AI responses may take up to 2 minutes — this is normal.
+    <div style="margin-bottom:14px">
+      <div style="font-size:20px;font-weight:700;color:var(--success);margin-bottom:8px">✅ Always Free</div>
+      <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
+        <li>All 22 health sections — medications, allergies, conditions, vitals, documents, and more</li>
+        <li>Emergency View — your medical ID for first responders, no login needed</li>
+        <li>Call 911 and tap-to-call your emergency contacts from the Emergency tab</li>
+        <li>Cloud backup and sync across devices (requires a free account)</li>
+        <li>Family profiles, care team, appointment tracking, and everything else</li>
+      </ul>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:700;color:var(--accent);margin-bottom:8px">⭐ Premium — $3/month in LCAI</div>
+      <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
+        <li><strong style="color:var(--text-primary)">🎙️ AI Health Assistant with Voice</strong> — speak or type any health question and get an answer. Knows your medications, conditions, and allergies. Can look up your doctor's phone number and give you a tap-to-call button.</li>
+        <li>Drug interaction checker — checks all your medications for potential interactions</li>
+        <li>Medication explainer — plain-English explanation of what any medication does</li>
+        <li>Lab result analysis — helps you understand your bloodwork before your next appointment</li>
+        <li>Symptom pattern analysis — reviews your symptom journal for patterns worth discussing with your doctor</li>
+        <li>Doctor question generator — creates a personalized list of questions before an appointment</li>
+        <li>Document AI — reads and summarizes uploaded medical documents</li>
+      </ul>
+      <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:12px">
+        To upgrade, go to <strong style="color:var(--accent)">Settings → Subscription</strong>. Payment is made in LCAI — a cryptocurrency available on most major exchanges.
+      </p>
+    </div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <strong style="color:var(--emergency)">Important:</strong> All AI features provide general background information only. The AI is not a doctor and cannot give medical advice. Always check with your doctor or pharmacist before changing anything about your health care. AI responses may take up to 2 minutes — this is normal.
     </p>
   </div>
 
@@ -1644,6 +1661,15 @@ body.ob-open{overflow:hidden}
     </p>
   </div>
 
+  <div id="ai-chat-premium-gate" style="display:none">
+    <div class="card" style="border-color:var(--warning);background:rgba(255,165,0,0.08);text-align:center;padding:28px">
+      <div style="font-size:40px;margin-bottom:10px">⭐</div>
+      <div style="font-size:24px;font-weight:800;color:var(--text-primary);margin-bottom:8px">Premium Feature</div>
+      <p style="font-size:20px;color:var(--text-secondary);margin-bottom:16px">The AI Health Assistant is available to Premium subscribers. Upgrade for $3/month in LCAI to unlock voice chat, drug interaction checks, lab analysis, and all other AI features.</p>
+      <button class="btn btn-primary" onclick="openPaymentModal()" style="font-size:20px;padding:12px 28px">⭐ Upgrade to Premium</button>
+    </div>
+  </div>
+
   <!-- Chat message window -->
   <div id="ai-chat-messages" style="
     min-height:300px;
@@ -2108,8 +2134,8 @@ body.ob-open{overflow:hidden}
         <div style="font-size:13px;color:var(--text-secondary)">AI features (drug interactions, lab analysis, pattern detection) require Premium.</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Premium is $3/month in LCAI tokens.</div>
       </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="togglePremium()" id="btn-toggle-premium">Upgrade to Premium</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap" id="btn-toggle-premium-wrap">
+        <button class="btn btn-primary" onclick="openPaymentModal()" id="btn-toggle-premium">⭐ Upgrade to Premium — $3/month in LCAI</button>
       </div>
     </div>
   </div>
@@ -2747,6 +2773,7 @@ function removeAiChatThinking() {
 }
 
 async function sendAiChat() {
+  if(!isPremium()) { showUpgradeToast(); return; }
   const input = document.getElementById('ai-chat-input');
   if(!input) return;
   const text = input.value.trim();
@@ -2793,6 +2820,7 @@ function clearAiChat() {
 // ── VOICE INPUT (Web Speech API) ──────────────────────────────────────────────
 
 function toggleVoiceInput() {
+  if(!isPremium()) { showUpgradeToast(); return; }
   if(_voiceActive) {
     stopVoiceInput();
   } else {
@@ -3106,6 +3134,18 @@ function showSection(name) {
   if(name==='family') renderFamilyProfiles();
   if(name==='settings') loadSettingsPage();
   if(name==='healthapps') renderHealthApps();
+  if(name==='ai-chat') {
+    const gate = document.getElementById('ai-chat-premium-gate');
+    const chat = document.getElementById('ai-chat-messages');
+    const inp  = document.querySelector('#section-ai-chat textarea');
+    const locked = !isPremium();
+    if(gate) gate.style.display = locked ? 'block' : 'none';
+    if(chat) chat.style.display = locked ? 'none' : 'flex';
+    if(inp)  inp.style.display  = locked ? 'none' : '';
+    const micBtn  = document.getElementById('ai-mic-btn');
+    const sendRow = micBtn && micBtn.parentElement;
+    if(sendRow) sendRow.style.display = locked ? 'none' : 'flex';
+  }
 }
 
 function showAIBanner(show, id) {
@@ -4250,20 +4290,20 @@ function deleteFamilyProfile(id) {
 function loadSettingsPage() {
   const s = getSettings();
   const statusEl = document.getElementById('sub-status-display');
-  const btnEl = document.getElementById('btn-toggle-premium');
+  const btnWrap  = document.getElementById('btn-toggle-premium-wrap');
   if (s.isPremium === true) {
     statusEl.textContent = '⭐ Premium — Owner Access (Permanent)';
     statusEl.style.color = 'var(--accent)';
-    btnEl.textContent = '⭐ Premium Active';
+    if(btnWrap) btnWrap.style.display = 'none';
   } else if (s.premiumUntil && Date.now() < s.premiumUntil) {
     const until = new Date(s.premiumUntil).toLocaleDateString();
     statusEl.textContent = '⭐ Premium — Active until ' + until;
     statusEl.style.color = 'var(--accent)';
-    btnEl.textContent = '⭐ Renew Premium';
+    if(btnWrap) btnWrap.style.display = 'none';
   } else {
-    statusEl.textContent = '🔓 Free Plan';
+    statusEl.textContent = '🔓 Free Plan — AI features require Premium';
     statusEl.style.color = 'var(--text-secondary)';
-    btnEl.textContent = '⭐ Upgrade to Premium — $3/month in LCAI';
+    if(btnWrap) btnWrap.style.display = 'flex';
   }
   renderAcctSettings();
   renderIdentitiesList();
