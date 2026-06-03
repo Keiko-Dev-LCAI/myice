@@ -120,10 +120,11 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 .badge-gray{background:rgba(139,148,158,0.13);color:var(--text-secondary);border:1px solid var(--border)}
 
 /* ── ALERT BANNERS ── */
-.alert-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:8px;font-size:34px;font-weight:800;letter-spacing:0.5px;margin-bottom:10px;border-left:5px solid}
+.alert-banner{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:8px;font-size:34px;font-weight:800;letter-spacing:0.5px;margin-bottom:10px;border-left:5px solid;overflow:hidden;min-width:0}
 .alert-banner.critical{background:rgba(230,57,70,0.12);border-left-color:var(--emergency);color:#ff6b78}
 .alert-banner.important{background:rgba(247,127,0,0.12);border-left-color:var(--warning);color:#ffaa44}
-.alert-banner .alert-icon{font-size:44px}
+.alert-banner .alert-icon{font-size:44px;flex-shrink:0}
+.alert-banner .alert-text{flex:1;min-width:0;word-break:break-word;overflow-wrap:break-word}
 
 /* ── PRIVACY TOGGLE ── */
 .privacy-toggle{display:inline-flex;align-items:center;gap:5px;font-size:23px;cursor:pointer;padding:4px 9px;border-radius:100px;border:1px solid var(--border);background:var(--bg-primary);transition:all 0.12s;white-space:nowrap;font-family:inherit}
@@ -749,6 +750,7 @@ body.ob-open{overflow:hidden}
         <span class="nav-icon">📋</span> Terms &amp; Disclaimers
       </div>
       <div style="height:20px"></div>
+      <div id="sidebar-logout-area"></div>
     </nav>
 
     <!-- ── MAIN CONTENT ── -->
@@ -2046,14 +2048,13 @@ body.ob-open{overflow:hidden}
   </div>
 </div>
 
+      <!-- ORCAPOD STRIP — only visible when scrolled to bottom -->
+      <div class="orcapod-strip" style="margin-top:24px">
+        🐬 <a href="https://keiko-dev-lcai.github.io/orcapod/" target="_blank">OrcaPod — All our apps</a>
+      </div>
     </main>
   </div><!-- end app-body -->
 </div><!-- end app-shell -->
-
-<!-- ORCAPOD STRIP -->
-<div class="orcapod-strip">
-  🐬 <a href="https://keiko-dev-lcai.github.io/orcapod/" target="_blank">OrcaPod — All our apps</a>
-</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -2254,7 +2255,7 @@ function renderEmergencyView() {
     html += '<div style="margin-bottom:20px">';
     visAlerts.forEach(a=>{
       const cls = a.severity==='critical'?'critical':'important';
-      html += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span>${esc(a.text)}</div>`;
+      html += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span><span class="alert-text">${esc(a.text)}</span></div>`;
     });
     html += '</div>';
   }
@@ -2317,7 +2318,7 @@ function renderDashboard() {
   let alertHtml = '';
   alerts.filter(a=>a.active!==false).forEach(a=>{
     const cls=a.severity==='critical'?'critical':'important';
-    alertHtml += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span>${esc(a.text)}</div>`;
+    alertHtml += `<div class="alert-banner ${cls}"><span class="alert-icon">${a.severity==='critical'?'🔴':'🟠'}</span><span class="alert-text">${esc(a.text)}</span></div>`;
   });
   document.getElementById('dash-alerts-area').innerHTML = alertHtml;
 
@@ -3833,6 +3834,23 @@ function updateAcctHeaderBtn() {
     label.textContent = mobile ? '🔒' : '🔒 ' + acct.username;
     btn.title = 'Locked — tap to log back in as ' + acct.username;
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
+  }
+  // Update sidebar logout area
+  const sidebarLogout = document.getElementById('sidebar-logout-area');
+  if(sidebarLogout) {
+    if(acct && _sessionLoggedIn) {
+      sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--emergency);border-top:1px solid var(--border);margin-top:8px" onclick="doLogout();closeSidebar()">
+        <span class="nav-icon">🔒</span> Log Out (${esc(acct.username)})
+      </div>`;
+    } else if(acct) {
+      sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="switchAcctTab('login');openAcctModal();closeSidebar()">
+        <span class="nav-icon">🔑</span> Log In (${esc(acct.username)})
+      </div>`;
+    } else {
+      sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="openAcctModal();closeSidebar()">
+        <span class="nav-icon">🔑</span> Create Account / Login
+      </div>`;
+    }
   }
 }
 
