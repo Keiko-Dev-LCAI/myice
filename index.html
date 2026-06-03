@@ -44,7 +44,7 @@ a{color:inherit;text-decoration:none}
 .logo{font-size:26px;font-weight:800;color:var(--text-primary);display:flex;align-items:center;gap:6px;letter-spacing:-0.3px}
 .logo-symbol{color:var(--accent);font-size:28px}
 .logo-sub{font-size:18px;color:var(--text-muted);font-weight:400;letter-spacing:0.5px;margin-left:2px;align-self:flex-end;padding-bottom:2px}
-.header-right{display:flex;align-items:center;gap:8px}
+.header-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .btn-hamburger{background:none;border:none;color:var(--text-primary);cursor:pointer;font-size:22px;padding:6px;display:none}
 .app-body{display:flex;flex:1;min-height:0;overflow-x:hidden;max-width:100%}
 
@@ -662,7 +662,7 @@ body.ob-open{overflow:hidden}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
-      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;margin-left:12px"><span id="acct-header-label">Login</span></button>
+      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 10px;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;margin-left:6px;flex-shrink:1"><span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
