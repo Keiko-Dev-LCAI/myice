@@ -4975,6 +4975,22 @@ async function unwrapAESKeyWithPRF(prfOutput, wrappedKeyHex, ivHex) {
   return crypto.subtle.unwrapKey('raw', raw, wk, {name:'AES-GCM',iv}, {name:'AES-GCM'}, true, ['encrypt','decrypt']);
 }
 
+// Compat fallback: wrap AES key using credential ID as key material (works on all WebAuthn browsers)
+async function wrapAESKeyCompat(credId, aesKey) {
+  const km  = await crypto.subtle.importKey('raw', new TextEncoder().encode(credId + 'myice-compat-v1'), 'PBKDF2', false, ['deriveKey']);
+  const wk  = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:new TextEncoder().encode('myice-compat-salt'), iterations:100000, hash:'SHA-256' }, km, { name:'AES-GCM', length:256 }, false, ['wrapKey']);
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const raw = await crypto.subtle.wrapKey('raw', aesKey, wk, { name:'AES-GCM', iv });
+  return { wrappedKey: bytesToHex(new Uint8Array(raw)), iv: bytesToHex(iv) };
+}
+async function unwrapAESKeyCompat(credId, wrappedKeyHex, ivHex) {
+  const km  = await crypto.subtle.importKey('raw', new TextEncoder().encode(credId + 'myice-compat-v1'), 'PBKDF2', false, ['deriveKey']);
+  const wk  = await crypto.subtle.deriveKey({ name:'PBKDF2', salt:new TextEncoder().encode('myice-compat-salt'), iterations:100000, hash:'SHA-256' }, km, { name:'AES-GCM', length:256 }, false, ['unwrapKey']);
+  const raw = Uint8Array.from(wrappedKeyHex.match(/.{2}/g).map(h=>parseInt(h,16)));
+  const iv  = Uint8Array.from(ivHex.match(/.{2}/g).map(h=>parseInt(h,16)));
+  return crypto.subtle.unwrapKey('raw', raw, wk, { name:'AES-GCM', iv }, { name:'AES-GCM' }, true, ['encrypt','decrypt']);
+}
+
 async function setupBiometric() {
   const acct = getAccount();
   if(!acct) { showToast('Create an account first.'); return; }
@@ -4989,15 +5005,20 @@ async function setupBiometric() {
       timeout: 60000,
       extensions: { prf:{ eval:{ first:BIO_PRF_SALT } } }
     }});
-    const ext = cred.getClientExtensionResults();
-    if(!ext.prf?.results?.first) {
-      showToast('⚠️ Your browser supports biometrics but not passwordless login yet. Try updating your browser, then set this up again.');
-      return;
-    }
-    const prfOutput = new Uint8Array(ext.prf.results.first);
-    const { wrappedKey, iv } = await wrapAESKeyWithPRF(prfOutput, _sessionKey);
     const credId = base64urlEncode(new Uint8Array(cred.rawId));
-    localStorage.setItem(BIO_PRF_KEY, JSON.stringify({ credentialId:credId, wrappedKey, iv, address:acct.address, username:acct.username }));
+    const ext    = cred.getClientExtensionResults();
+    let wrappedKey, iv, method;
+    if(ext.prf?.results?.first) {
+      // Best method: PRF output wraps AES key directly
+      const prfOutput = new Uint8Array(ext.prf.results.first);
+      ({ wrappedKey, iv } = await wrapAESKeyWithPRF(prfOutput, _sessionKey));
+      method = 'prf';
+    } else {
+      // Compat fallback: credential ID used as key material (still requires biometric to get credId back)
+      ({ wrappedKey, iv } = await wrapAESKeyCompat(credId, _sessionKey));
+      method = 'compat';
+    }
+    localStorage.setItem(BIO_PRF_KEY, JSON.stringify({ credentialId:credId, wrappedKey, iv, method, address:acct.address, username:acct.username }));
     acct.hasBiometric = true;
     saveAccount(acct);
     loadSettingsPage();
@@ -5021,13 +5042,16 @@ async function doBiometricLogin() {
       timeout: 60000,
       extensions: { prf:{ eval:{ first:BIO_PRF_SALT } } }
     }});
-    const ext = assertion.getClientExtensionResults();
-    if(!ext.prf?.results?.first) {
-      showToast('⚠️ Passwordless login not supported on this browser. Please use your password.');
-      return;
+    let aesKey;
+    if(stored.method === 'prf') {
+      const ext = assertion.getClientExtensionResults();
+      if(!ext.prf?.results?.first) { showToast('⚠️ Biometric login failed. Please use your password.'); return; }
+      aesKey = await unwrapAESKeyWithPRF(new Uint8Array(ext.prf.results.first), stored.wrappedKey, stored.iv);
+    } else {
+      // Compat: credential ID returned from assertion is used to unwrap
+      const credId = base64urlEncode(new Uint8Array(assertion.rawId));
+      aesKey = await unwrapAESKeyCompat(credId, stored.wrappedKey, stored.iv);
     }
-    const prfOutput = new Uint8Array(ext.prf.results.first);
-    const aesKey    = await unwrapAESKeyWithPRF(prfOutput, stored.wrappedKey, stored.iv);
     // Session setup — same as password login
     _sessionKey      = aesKey;
     _sessionAddr     = stored.address;
