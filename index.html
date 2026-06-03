@@ -2077,8 +2077,8 @@ const BACKEND = 'https://web-production-a6add.up.railway.app';
 
 const AI_WARNING_BANNER = `<div style="background:#3d0a0a;border:2px solid var(--emergency);border-radius:10px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:flex-start;gap:12px">
   <span style="font-size:22px;flex-shrink:0">🔴</span>
-  <div style="font-size:15px;color:#ffb3b3;line-height:1.6">
-    <strong style="color:#ff6b6b;font-size:16px">AI-generated information only — NOT medical advice.</strong><br>
+  <div style="font-size:20px;color:#ffb3b3;line-height:1.6">
+    <strong style="color:#ff6b6b;font-size:22px">AI-generated information only — NOT medical advice.</strong><br>
     This output may be inaccurate or incomplete. Do <u>not</u> change, stop, or start any medication or treatment based on this.
     Always consult your doctor or pharmacist before making any changes to your health care.
   </div>
@@ -2587,7 +2587,7 @@ async function checkInteractions() {
     const r=await fetch(`${BACKEND}/api/check-interactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({medications:meds,conditions:conds})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    showInfo('interaction-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Drug Interaction Background Info</strong><div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div></div>`);
+    showInfo('interaction-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Drug Interaction Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
   } catch(e) {
     showInfo('interaction-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
   }
@@ -2598,13 +2598,13 @@ async function explainMed(id) {
   const conds=gd('conditions',[]);
   const modal=document.createElement('div');
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9000;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:16px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 2 minutes...</div></div>`;
+  modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:700px;width:100%;max-height:88vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:22px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 2 minutes...</div></div>`;
   document.body.appendChild(modal);
   try {
     const r=await fetch(`${BACKEND}/api/explain-medication`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,dosage:m.dose||'',route:m.route||'',conditions:conds})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    modal.querySelector('#explain-content').innerHTML= AI_WARNING_BANNER + `<div style="font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.explanation)}</div>`;
+    modal.querySelector('#explain-content').innerHTML= AI_WARNING_BANNER + `<div style="font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.explanation)}</div>`;
   } catch(e) {
     modal.querySelector('#explain-content').innerHTML=`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI.')}</div>`;
   }
@@ -2679,7 +2679,7 @@ async function analyzeLab() {
     const r=await fetch(`${BACKEND}/api/analyze-labs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:notes,testName,conditions:conds,medications:meds})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    showInfo('lab-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Lab Results Background Info</strong><div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.analysis)}</div></div>`);
+    showInfo('lab-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Lab Results Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.analysis)}</div></div>`);
   } catch(e) {
     showInfo('lab-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
   }
@@ -2811,7 +2811,7 @@ async function analyzeDocument() {
     const r=await fetch(`${BACKEND}/api/analyze-document`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:docNotes,name:docName})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    showInfo('doc-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Document Background Info</strong><div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div></div>`);
+    showInfo('doc-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Document Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
   } catch(e) {
     showInfo('doc-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
   }
@@ -2894,7 +2894,7 @@ async function processImportFile(file) {
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('import-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)">
       <strong style="color:var(--accent)">🤖 Document Background Info — ${esc(file.name)}</strong>
-      <div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div>
+      <div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div>
       <div style="margin-top:12px">
         <button class="btn btn-secondary" style="font-size:12px" onclick="saveImportAsDocument('${esc(file.name)}', this)">💾 Save to My Documents</button>
       </div>
@@ -2997,7 +2997,7 @@ async function suggestQuestions() {
     const r=await fetch(`${BACKEND}/api/suggest-questions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conditions:conds,medications:meds,appointment:appt,recentLabs:labs})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    showInfo('q-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Suggested Questions for Your Doctor</strong><div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.questions)}</div></div>`);
+    showInfo('q-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Suggested Questions for Your Doctor</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.questions)}</div></div>`);
   } catch(e) {
     showInfo('q-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
   }
@@ -3233,7 +3233,7 @@ async function analyzeSymptoms() {
     const r=await fetch(`${BACKEND}/api/analyze-symptoms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symptoms:items,conditions:conds,medications:meds})});
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
-    showInfo('sj-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Symptom Pattern Background Info</strong><div style="margin-top:10px;font-size:14px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.7">${esc(d.result)}</div></div>`);
+    showInfo('sj-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Symptom Pattern Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
   } catch(e) {
     showInfo('sj-ai-result',`<div style="color:var(--warning)">⚠️ ${esc(e.message||'Unable to reach AI. Please try again.')}</div>`);
   }
