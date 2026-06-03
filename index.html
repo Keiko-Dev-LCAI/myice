@@ -2084,6 +2084,11 @@ const AI_WARNING_BANNER = `<div style="background:#3d0a0a;border:2px solid var(-
   </div>
 </div>`;
 const STORAGE_PREFIX = 'myice_';
+const LC_RPC         = 'https://rpc.mainnet.lightchain.ai';
+const PAYMENT_WALLET = '0x6518fD26a7aD2Fe1bA80De5f279Ee59F55C0A9bA';
+const PREMIUM_USD    = 3.00;
+let _lcaiPrice = null, _lcaiPriceTs = 0;
+
 let activeProfileId = 'default';
 let sessionAuth = null; // null | 'owner' | 'caregiver'
 let pinCallback = null;
@@ -2110,7 +2115,12 @@ function fmt(date) {
   catch(e) { return date; }
 }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function isPremium() { return getSettings().isPremium; }
+function isPremium() {
+  const s = getSettings();
+  if (s.isPremium === true) return true; // permanent (owner mode)
+  if (s.premiumUntil && Date.now() < s.premiumUntil) return true; // paid subscription active
+  return false;
+}
 
 // ── PIN SYSTEM ──
 function requireAuth(cb) {
@@ -3328,10 +3338,23 @@ function deleteFamilyProfile(id) {
 
 // ── SETTINGS ──
 function loadSettingsPage() {
-  const s=getSettings();
-  document.getElementById('sub-status-display').textContent=s.isPremium?'⭐ Premium — Active':'🔓 Free Plan';
-  document.getElementById('sub-status-display').style.color=s.isPremium?'var(--accent)':'var(--text-secondary)';
-  document.getElementById('btn-toggle-premium').textContent=s.isPremium?'Cancel Premium (revert to Free)':'⭐ Activate Premium (Dev Mode)';
+  const s = getSettings();
+  const statusEl = document.getElementById('sub-status-display');
+  const btnEl = document.getElementById('btn-toggle-premium');
+  if (s.isPremium === true) {
+    statusEl.textContent = '⭐ Premium — Owner Access (Permanent)';
+    statusEl.style.color = 'var(--accent)';
+    btnEl.textContent = '⭐ Premium Active';
+  } else if (s.premiumUntil && Date.now() < s.premiumUntil) {
+    const until = new Date(s.premiumUntil).toLocaleDateString();
+    statusEl.textContent = '⭐ Premium — Active until ' + until;
+    statusEl.style.color = 'var(--accent)';
+    btnEl.textContent = '⭐ Renew Premium';
+  } else {
+    statusEl.textContent = '🔓 Free Plan';
+    statusEl.style.color = 'var(--text-secondary)';
+    btnEl.textContent = '⭐ Upgrade to Premium — $3/month in LCAI';
+  }
 }
 function saveOwnerPin() {
   const pin=document.getElementById('owner-pin-input').value;
@@ -3356,10 +3379,125 @@ function saveCaregiverPin() {
   document.getElementById('cg-pin-input').value=''; document.getElementById('cg-pin-confirm').value='';
 }
 function clearCaregiverPin() { if(!confirm('Remove caregiver PIN?')) return; const s=getSettings(); s.caregiverPin=''; saveSettings(s); document.getElementById('cg-pin-msg').textContent='PIN cleared.'; }
+// ── LCAI PRICE ──────────────────────────────────────────────────
+async function getLCAIPrice() {
+  if (_lcaiPrice && Date.now() - _lcaiPriceTs < 300000) return _lcaiPrice;
+  for (const id of ['lightchain-ai','lightchain']) {
+    try {
+      const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids='+id+'&vs_currencies=usd');
+      const d = await r.json();
+      const p = d[id] && d[id].usd;
+      if (p && p > 0) { _lcaiPrice = parseFloat(p); _lcaiPriceTs = Date.now(); return _lcaiPrice; }
+    } catch(e) {}
+  }
+  try {
+    const r = await fetch('https://api.dexscreener.com/latest/dex/search?q=LCAI');
+    const d = await r.json();
+    for (const pair of (d.pairs||[])) {
+      if ((pair.baseToken?.symbol||'').toUpperCase()==='LCAI') {
+        const p = parseFloat(pair.priceUsd||0);
+        if (p > 0) { _lcaiPrice = p; _lcaiPriceTs = Date.now(); return p; }
+      }
+    }
+  } catch(e) {}
+  return _lcaiPrice || 0.004;
+}
+
+// ── PAYMENT MODAL ────────────────────────────────────────────────
+async function openPaymentModal() {
+  const existing = document.getElementById('myice-payment-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'myice-payment-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  overlay.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <strong style="font-size:24px">⭐ Upgrade to Premium</strong>
+        <button onclick="document.getElementById('myice-payment-overlay').remove()" style="background:none;border:none;font-size:26px;cursor:pointer;color:var(--text-muted)">✕</button>
+      </div>
+      <div style="background:var(--accent-dim);border:1px solid rgba(0,180,216,0.3);border-radius:10px;padding:18px;margin-bottom:20px;font-size:20px;line-height:1.7">
+        <strong style="color:var(--accent);font-size:22px">$${PREMIUM_USD.toFixed(2)} USD/month in LCAI</strong><br>
+        <span id="myice-pay-lcai-amount" style="color:var(--text-secondary)">Loading price…</span><br>
+        <span id="myice-pay-lcai-rate" style="font-size:17px;color:var(--text-muted)"></span>
+      </div>
+      <div style="font-size:20px;line-height:1.8;margin-bottom:20px;color:var(--text-secondary)">
+        <strong style="color:var(--text-primary)">How to pay:</strong><br>
+        1. Open your Trust Wallet<br>
+        2. Send the LCAI amount above to:<br>
+        <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:12px;margin:10px 0;font-family:monospace;font-size:16px;word-break:break-all;color:var(--accent)">${PAYMENT_WALLET}</div>
+        <button onclick="navigator.clipboard&&navigator.clipboard.writeText('${PAYMENT_WALLET}').then(()=>alert('Address copied!'))" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:6px 14px;cursor:pointer;font-size:17px;color:var(--text-primary);margin-bottom:10px">📋 Copy Address</button><br>
+        3. Paste the transaction hash below and tap Verify
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:20px;font-weight:600;display:block;margin-bottom:8px">Transaction Hash (0x…)</label>
+        <input id="myice-pay-txhash" type="text" placeholder="0x..." style="width:100%;padding:12px;font-size:18px;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;color:var(--text-primary);box-sizing:border-box">
+      </div>
+      <div id="myice-pay-status" style="font-size:18px;color:var(--text-secondary);margin-bottom:12px;min-height:24px"></div>
+      <button id="myice-pay-btn" onclick="submitMyICEPayment()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:16px;font-size:22px;font-weight:700;cursor:pointer">✅ Verify Payment</button>
+      <p style="font-size:16px;color:var(--text-muted);margin-top:14px;line-height:1.6">Payments are in LCAI on Lightchain mainnet (chain ID 9200). All payments are final and non-refundable. Premium activates for 31 days from payment date.</p>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Load price
+  try {
+    const price = await getLCAIPrice();
+    const lcai = (PREMIUM_USD / price).toFixed(2);
+    document.getElementById('myice-pay-lcai-amount').textContent = lcai + ' LCAI';
+    document.getElementById('myice-pay-lcai-rate').textContent = '1 LCAI = $' + price.toFixed(4) + ' USD';
+  } catch(e) {
+    document.getElementById('myice-pay-lcai-amount').textContent = '~750 LCAI (approx)';
+  }
+}
+
+async function submitMyICEPayment() {
+  const txHash = document.getElementById('myice-pay-txhash').value.trim();
+  const statusEl = document.getElementById('myice-pay-status');
+  const btn = document.getElementById('myice-pay-btn');
+  if (!txHash || !txHash.startsWith('0x')) { statusEl.textContent = '⚠️ Enter a valid 0x… transaction hash'; return; }
+  statusEl.textContent = '⏳ Verifying on Lightchain…';
+  btn.disabled = true;
+  try {
+    const rpc = async (method, params) => {
+      const r = await fetch(LC_RPC, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
+      return (await r.json()).result;
+    };
+    const tx = await rpc('eth_getTransactionByHash', [txHash]);
+    if (!tx) throw new Error('Transaction not found on Lightchain. Check the hash and make sure you are on Lightchain network.');
+    if (!tx.to || tx.to.toLowerCase() !== PAYMENT_WALLET.toLowerCase()) throw new Error('Payment was not sent to the correct address.');
+    const price = await getLCAIPrice();
+    const reqLCAI = PREMIUM_USD / price;
+    const reqWei = BigInt(Math.round(reqLCAI * 1e18));
+    const val = BigInt(tx.value || '0x0');
+    if (val < reqWei) throw new Error('Payment too low. Required: ' + reqLCAI.toFixed(2) + ' LCAI for $' + PREMIUM_USD + ' USD.');
+    const block = await rpc('eth_getBlockByNumber', [tx.blockNumber, false]);
+    const ts = parseInt(block.timestamp, 16) * 1000;
+    if (Date.now() - ts > 31 * 24 * 3600 * 1000) throw new Error('Payment is older than 31 days. Please send a new payment to renew.');
+    // All good — activate premium
+    const s = getSettings();
+    s.premiumUntil = ts + (31 * 24 * 3600 * 1000);
+    s.premiumTxHash = txHash;
+    saveSettings(s);
+    document.getElementById('myice-payment-overlay').remove();
+    loadSettingsPage();
+    alert('🎉 Premium activated! Valid for 31 days. Thank you!');
+  } catch(e) {
+    statusEl.textContent = '❌ ' + (e.message || 'Verification failed. Please try again.');
+    btn.disabled = false;
+  }
+}
+
 function togglePremium() {
-  const s=getSettings(); s.isPremium=!s.isPremium; saveSettings(s); loadSettingsPage();
-  if(s.isPremium) alert('⭐ Premium activated! (Dev mode — no payment required)');
-  else alert('Reverted to Free plan.');
+  if (isPremium()) {
+    // Already premium — show status
+    const s = getSettings();
+    if (s.isPremium === true) { alert('⭐ You have permanent owner access. No subscription needed.'); return; }
+    const until = new Date(s.premiumUntil).toLocaleDateString();
+    alert('⭐ Premium active until ' + until + '.\n\nTo renew, send a new payment before it expires.');
+  } else {
+    openPaymentModal();
+  }
 }
 function exportData() {
   const data={exported:new Date().toISOString(),profile:activeProfileId,data:{}};
