@@ -4892,6 +4892,7 @@ async function doLogin() {
         // Always pull from chain — if no record exists, toast will say so
         setTimeout(pullFromChain, 600);
       }
+      if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 3000);
     } catch(e) {
       errEl.textContent = 'Login failed. Please try again.';
     }
@@ -4933,6 +4934,8 @@ async function doLogin() {
     } else {
       doSync();
     }
+    // Offer biometric setup after sync message clears
+    if(window.PublicKeyCredential) setTimeout(offerBiometricSetup, 3000);
   } catch(e) {
     errEl.textContent = 'Login failed. Please try again.';
   }
