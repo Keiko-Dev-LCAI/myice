@@ -652,7 +652,7 @@ body.ob-open{overflow:hidden}
       <button class="profile-switcher-btn" id="profile-switcher-btn" onclick="navTo('profile')">
         👤 <span id="active-profile-name">My Profile</span>
       </button>
-      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;margin-left:12px">🔐 <span id="acct-header-label">Login</span></button>
+      <button class="btn btn-secondary" id="acct-header-btn" onclick="openAcctModal()" style="font-size:13px;padding:8px 14px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;margin-left:12px"><span id="acct-header-label">Login</span></button>
       <button class="btn-emergency-header" onclick="showEmergency()">🚨 <span class="emerg-label">EMERGENCY</span><span class="emerg-short" style="display:none">SOS</span></button>
     </div>
   </header>
@@ -3822,18 +3822,17 @@ function updateAcctHeaderBtn() {
   const acct  = getAccount();
   if(!btn) return;
   btn.style.display = 'flex';
-  const mobile = window.innerWidth <= 768;
   if(!acct) {
-    label.textContent = mobile ? '🔑' : '🔑 Login';
+    label.textContent = 'Login';
     btn.title = 'Create account or login';
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   } else if(_sessionLoggedIn) {
-    label.textContent = mobile ? '👤' : '👤 ' + acct.username;
+    label.textContent = acct.username;
     btn.title = acct.username + ' — tap for account menu';
     btn.onclick = () => showAcctMenu();
   } else {
-    label.textContent = mobile ? '🔒' : '🔒 ' + acct.username;
-    btn.title = 'Locked — tap to log back in as ' + acct.username;
+    label.textContent = 'Login';
+    btn.title = 'Tap to log back in as ' + acct.username;
     btn.onclick = () => { switchAcctTab('login'); openAcctModal(); };
   }
   // Update sidebar logout area
@@ -3841,15 +3840,15 @@ function updateAcctHeaderBtn() {
   if(sidebarLogout) {
     if(acct && _sessionLoggedIn) {
       sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--emergency);border-top:1px solid var(--border);margin-top:8px" onclick="doLogout();closeSidebar()">
-        <span class="nav-icon">🔒</span> Log Out (${esc(acct.username)})
+        <span class="nav-icon">👋</span> Log Out
       </div>`;
     } else if(acct) {
       sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="switchAcctTab('login');openAcctModal();closeSidebar()">
-        <span class="nav-icon">🔑</span> Log In (${esc(acct.username)})
+        <span class="nav-icon">👤</span> Log In as ${esc(acct.username)}
       </div>`;
     } else {
       sidebarLogout.innerHTML = `<div class="nav-item" style="color:var(--accent);border-top:1px solid var(--border);margin-top:8px" onclick="openAcctModal();closeSidebar()">
-        <span class="nav-icon">🔑</span> Create Account / Login
+        <span class="nav-icon">👤</span> Create Account / Login
       </div>`;
     }
   }
