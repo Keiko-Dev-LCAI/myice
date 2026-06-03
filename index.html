@@ -678,6 +678,10 @@ body.ob-open{overflow:hidden}
         <span class="nav-icon">🏠</span> Dashboard
       </div>
 
+      <div class="nav-item" data-section="start-here" onclick="navTo('start-here')" style="color:var(--accent);font-weight:700">
+        <span class="nav-icon">👋</span> Start Here
+      </div>
+
       <div class="sidebar-section-label">My Health</div>
       <div class="nav-item" data-section="profile" onclick="navTo('profile')">
         <span class="nav-icon">👤</span> My Profile
@@ -800,6 +804,122 @@ body.ob-open{overflow:hidden}
     <div class="card-title">💊 Current Medications</div>
     <div id="dash-medications"></div>
   </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION: START HERE
+══════════════════════════════════════ -->
+<div class="section" id="section-start-here">
+  <div class="section-title"><span class="title-icon">👋</span> Start Here</div>
+
+  <div class="card" style="border-color:var(--accent);background:var(--accent-dim)">
+    <div class="card-title" style="color:var(--accent);font-size:26px">Welcome to MyICE ⚕️</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      MyICE stands for <strong style="color:var(--text-primary)">My In Case of Emergency</strong>. It is your personal health vault — a safe place to store everything a doctor, paramedic, or family member would need to know about you in an emergency, or just to help manage your health every day.<br><br>
+      You do not need to fill everything in at once. Start with the most important things — your medications, allergies, and emergency contacts — and add more over time.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">🚨 For First Responders — The Emergency Card</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      This is the most important feature in MyICE. If you are ever in an accident, unconscious, or unable to speak, a paramedic or emergency room doctor can pull up your emergency information <strong style="color:var(--text-primary)">instantly — no login, no password, no app download needed</strong>.<br><br>
+      Your emergency page is always available at:<br>
+      <span style="font-family:monospace;font-size:17px;color:var(--accent);word-break:break-all">keiko-dev-lcai.github.io/myice</span><br><br>
+      A first responder simply opens that link on any phone or computer and taps <strong style="color:var(--emergency)">Emergency View</strong> at the top of the screen. They will immediately see your:<br>
+    </p>
+    <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
+      <li>Blood type and critical medical alerts</li>
+      <li>Current medications and dosages</li>
+      <li>Allergies (especially drug allergies)</li>
+      <li>Emergency contacts and their phone numbers</li>
+      <li>DNR / advance directive status</li>
+      <li>Primary doctor name and phone number</li>
+    </ul>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:12px">
+      <strong style="color:var(--emergency)">Tip:</strong> Write the URL on a card in your wallet or put it on your phone's lock screen. That way anyone who finds you knows exactly where to look.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">🏥 What You Can Store</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      MyICE has over 20 sections covering every part of your health. You do not need to use all of them — use whatever is most useful to you. Here is what is available:
+    </p>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:12px">
+      <div style="font-size:19px;line-height:2;color:var(--text-secondary)">
+        💊 Medications<br>⚠️ Allergies<br>🩺 Conditions<br>🔬 Lab Results<br>❤️ Vitals & Charts<br>📋 Documents<br>📅 Appointments<br>💉 Vaccinations
+      </div>
+      <div style="font-size:19px;line-height:2;color:var(--text-secondary)">
+        👨‍⚕️ Care Team<br>📞 Emergency Contacts<br>🦷 Vision & Dental<br>🔧 Medical Devices<br>📓 Symptom Journal<br>🎯 Health Goals<br>👨‍👩‍👧 Family Profiles<br>🏥 Health Insurance
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">👨‍👩‍👧 Caregiver & Family Access — Why It Matters</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      Many people rely on a family member, spouse, or professional caregiver to help manage their health. MyICE makes this safe and simple.<br><br>
+      You can set up a <strong style="color:var(--text-primary)">Caregiver PIN</strong> — a separate access code that lets a trusted person add notes, update records, and view your information, but <strong style="color:var(--text-primary)">not change your critical settings or delete your data</strong>. The Owner PIN (your full access code) stays private to you.<br><br>
+      You can also add <strong style="color:var(--text-primary)">Family Profiles</strong> — meaning one person in a family can manage health records for a spouse, parent, or child all in one place. Each profile is kept separate and private.<br><br>
+      <strong style="color:var(--accent)">Why this matters:</strong> If you are ever in the hospital and cannot speak for yourself, a family member with your caregiver access can quickly show doctors your full medical history, current medications, and advance directives. This can save critical time.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">🌍 Access Your Records Anywhere in the World</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      MyICE is a web app — meaning you can open it on <strong style="color:var(--text-primary)">any phone, tablet, or computer, anywhere in the world</strong>, just by going to:<br>
+      <span style="font-family:monospace;font-size:17px;color:var(--accent)">keiko-dev-lcai.github.io/myice</span><br><br>
+      <strong style="color:var(--text-primary)">Free users</strong> store data in their browser. This means your records are on that specific device. If you switch phones or clear your browser, the data stays behind.<br><br>
+      <strong style="color:var(--accent)">Premium subscribers ($3/month in LCAI)</strong> get their data backed up to the blockchain — meaning you can log in from any device, anywhere, and your full health records are always there. If you lose your phone, travel overseas, or visit a specialist in another city, everything is still accessible.<br><br>
+      <strong style="color:var(--text-primary)">Install to your home screen:</strong> MyICE works like a real app on your phone. On iPhone, open it in Safari and tap the Share button → "Add to Home Screen." On Android, tap the menu and tap "Add to Home Screen." It will look and feel just like a regular app — no App Store needed.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">🤖 AI Health Assistant</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      MyICE includes an AI health assistant powered by Lightchain AI — a decentralized AI network. The AI is available to <strong style="color:var(--text-primary)">Premium subscribers</strong> and can help you:<br>
+    </p>
+    <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
+      <li>Understand what a medication is used for and how it works</li>
+      <li>Check whether your medications might interact with each other</li>
+      <li>Understand your lab results in plain English</li>
+      <li>Analyze patterns in your symptom journal</li>
+      <li>Generate questions to ask your doctor before an appointment</li>
+      <li>Read and summarize uploaded medical documents</li>
+    </ul>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:12px">
+      <strong style="color:var(--emergency)">Important:</strong> The AI provides general background information only. It is not a doctor and does not give medical advice. Always check with your doctor or pharmacist before changing anything about your health care. AI responses may take up to 2 minutes — this is normal.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="font-size:24px">🔐 Your Privacy & How Data Is Stored</div>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
+      <strong style="color:var(--text-primary)">Free users:</strong> All your data is stored only on your device, in your browser. Nothing is sent to any server. Nobody can see your records except you (and anyone you give your PIN to). The downside is that if you clear your browser or switch devices, the data does not move with you.<br><br>
+      <strong style="color:var(--accent)">Premium users:</strong> Your emergency data is backed up to the Lightchain blockchain. Your private health records are encrypted before they are stored — meaning only someone with your password can read them. Not even the app can read your private data without your password.<br><br>
+      MyICE does not sell your data, show you ads, or share anything with third parties. Your health information is yours.
+    </p>
+  </div>
+
+  <div class="card" style="border-color:var(--success);background:rgba(46,160,67,0.08)">
+    <div class="card-title" style="color:var(--success);font-size:24px">✅ Quick Start — What to Do First</div>
+    <ol style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
+      <li>Go to <strong style="color:var(--text-primary)">My Profile</strong> and enter your name, date of birth, and blood type</li>
+      <li>Go to <strong style="color:var(--text-primary)">Medical Alerts</strong> and add your most critical conditions (e.g. diabetic, heart condition)</li>
+      <li>Go to <strong style="color:var(--text-primary)">Medications</strong> and add everything you take, including over-the-counter meds</li>
+      <li>Go to <strong style="color:var(--text-primary)">Allergies</strong> and add any drug or food allergies — especially life-threatening ones</li>
+      <li>Go to <strong style="color:var(--text-primary)">Emergency Contacts</strong> and add at least one person with a phone number</li>
+      <li>Install MyICE to your phone home screen so it is always one tap away</li>
+      <li>Tell a family member or caregiver about the emergency URL so they know where to find your information</li>
+    </ol>
+    <p style="font-size:20px;line-height:1.8;color:var(--text-secondary);margin-top:16px">
+      That is it — you now have a working emergency medical ID. Everything else you can fill in over time.
+    </p>
+  </div>
+
 </div>
 
 <!-- ══════════════════════════════════════
