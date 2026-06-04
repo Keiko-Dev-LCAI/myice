@@ -458,32 +458,24 @@ body.ob-open{overflow:hidden}
       </div>
     </div>
 
-    <!-- STEP 1: SHORT DISCLAIMER -->
+    <!-- STEP 1: MEDICAL WAIVER -->
     <div class="ob-step" id="ob-step-1">
       <div class="ob-body" style="display:flex;flex-direction:column;justify-content:center;gap:0">
-        <p style="font-size:24px;font-weight:700;color:var(--text-primary);margin-bottom:20px">Just a few things before you start:</p>
-        <div style="display:flex;flex-direction:column;gap:20px;margin-bottom:28px">
-          <div style="display:flex;align-items:flex-start;gap:14px;font-size:22px;color:var(--text-secondary);line-height:1.5">
-            <span style="font-size:26px;flex-shrink:0">⚕️</span>
-            <span>MyICE is a personal organizer, <strong style="color:var(--text-primary)">not a medical service.</strong> Nothing in this app is medical advice. Always talk to your doctor for medical decisions.</span>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:14px;font-size:22px;color:var(--text-secondary);line-height:1.5">
-            <span style="font-size:26px;flex-shrink:0">🚨</span>
-            <span>In a real emergency, <strong style="color:var(--text-primary)">call 911 first.</strong> This app is a helpful reference — not a replacement for emergency services.</span>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:14px;font-size:22px;color:var(--text-secondary);line-height:1.5">
-            <span style="font-size:26px;flex-shrink:0">💾</span>
-            <span>Keep your own backup of critical health info. Data stored only on your device can be lost if you clear your browser. <strong style="color:var(--text-primary)">Free accounts can back up to the blockchain.</strong></span>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:14px;font-size:22px;color:var(--text-secondary);line-height:1.5">
-            <span style="font-size:26px;flex-shrink:0">📋</span>
-            <span>The full terms and legal details are in the <strong style="color:var(--text-primary)">Terms &amp; Disclaimers</strong> section of the app — including the no-refund policy for Premium payments.</span>
-          </div>
+        <div style="text-align:center;font-size:52px;margin-bottom:16px">⚕️</div>
+        <p style="font-size:26px;font-weight:700;color:var(--text-primary);margin-bottom:20px;text-align:center">One important thing before you start</p>
+        <div style="background:rgba(0,188,212,0.08);border:2px solid var(--accent);border-radius:14px;padding:28px;margin-bottom:24px">
+          <p style="font-size:24px;color:var(--text-secondary);line-height:1.7;margin:0">
+            MyICE is a personal health organizer — <strong style="color:var(--text-primary)">not a medical service.</strong> Nothing in this app is medical advice, diagnosis, or treatment. Always consult your doctor for any medical decisions.<br><br>
+            In a real emergency, <strong style="color:var(--text-primary)">call 911 immediately.</strong> Do not rely on this app in place of emergency services.
+          </p>
         </div>
-        <div class="ob-check-row">
+        <div class="ob-check-row" style="margin-bottom:16px">
           <input type="checkbox" id="ob-agree-check" onchange="document.getElementById('ob-next-1').disabled=!this.checked">
-          <label for="ob-agree-check">I understand. MyICE is not medical advice, and I will call 911 in a real emergency.</label>
+          <label for="ob-agree-check">I understand — MyICE is not medical advice. I will call 911 in a real emergency.</label>
         </div>
+        <p style="font-size:18px;color:var(--text-muted);line-height:1.6;text-align:center">
+          By continuing you also agree to our full <strong style="color:var(--text-secondary)">Terms &amp; Disclaimers</strong>, including our no-refund policy for Premium payments and service availability terms. You can read them anytime inside the app under <strong style="color:var(--text-secondary)">Terms &amp; Disclaimers</strong> in the menu.
+        </p>
       </div>
       <div class="ob-footer">
         <div style="display:flex;align-items:center;gap:12px">
