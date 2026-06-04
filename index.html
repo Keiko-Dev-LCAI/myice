@@ -258,11 +258,6 @@ input[type=range]{accent-color:var(--accent);width:100%;cursor:pointer}
 .profile-switcher-btn{display:flex;align-items:center;gap:6px;background:var(--bg-hover);border:1px solid var(--border);border-radius:6px;padding:5px 10px;cursor:pointer;font-size:22px;color:var(--text-secondary);transition:all 0.12s;font-family:inherit}
 .profile-switcher-btn:hover{color:var(--text-primary);border-color:var(--accent)}
 
-/* ── ORCAPOD STRIP ── */
-.orcapod-strip{background:var(--bg-secondary);border-top:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:24px}
-.orcapod-strip a{color:var(--accent);text-decoration:none;font-weight:700;padding:6px 14px;border:1px solid rgba(0,180,216,0.3);border-radius:20px;transition:all 0.15s}
-.orcapod-strip a:hover{background:var(--accent-dim)}
-
 /* ── MOBILE ── */
 @media(max-width:768px){
   .btn-hamburger{display:flex}
@@ -2493,9 +2488,10 @@ body.ob-open{overflow:hidden}
   </div>
 
   <!-- OrcaPod — shown only on Help page -->
-  <div class="orcapod-strip" style="margin-top:24px">
-    🐬 <a href="https://keiko-dev-lcai.github.io/orcapod/" target="_blank">OrcaPod — All our apps</a>
-  </div>
+  <!-- ── ORCA POD LINK ── -->
+<div style="text-align:center;padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);">
+  <a href="https://keiko-dev-lcai.github.io/orcapod/" target="_blank" style="color:#7ec8e3;font-size:13px;text-decoration:none;font-weight:600;letter-spacing:.02em;">🐬 Other Orca dApps →</a>
+</div>
 </div>
 
     </main>
