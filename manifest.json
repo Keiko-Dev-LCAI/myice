@@ -1,8 +1,8 @@
 {
-  "name": "MyICE — Personal Health Vault",
+  "name": "MyICE \u2014 Personal Health Vault",
   "short_name": "MyICE",
   "description": "Your emergency medical ID and personal health vault.",
-  "start_url": "/myice/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#E63946",
