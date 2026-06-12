@@ -19,6 +19,30 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, origins="*")
 
+# ════════════════════════════════════════════════════════════════════════
+# CONVERSATION MEMORY (per-session, in-process)
+# ════════════════════════════════════════════════════════════════════════
+
+_sessions = {}
+
+def get_conversation_context(session_id, max_messages=12):
+    if not session_id or session_id not in _sessions:
+        return ""
+    history = _sessions[session_id][-max_messages:]
+    if not history:
+        return ""
+    lines = ["[PRIOR CONVERSATION]"]
+    for msg in history:
+        lines.append(f"User: {msg['user']}")
+        lines.append(f"Assistant: {msg['assistant']}")
+    return "\n".join(lines)
+
+def save_to_session(session_id, user_msg, ai_response):
+    if session_id not in _sessions:
+        _sessions[session_id] = []
+    _sessions[session_id].append({"user": user_msg, "assistant": ai_response})
+    _sessions[session_id] = _sessions[session_id][-50:]
+
 PORT = int(os.environ.get("PORT", 5000))
 TEST_MODE = os.environ.get("MYICE_TEST_MODE", "").lower() in ("true", "1", "yes")
 
@@ -657,6 +681,7 @@ def chat():
     data       = request.get_json(silent=True) or {}
     message    = data.get("message", "").strip()
     context    = data.get("context", {})
+    session_id = data.get("session_id", '')
 
     if not message:
         return jsonify({"error": "No message provided"}), 400
@@ -697,6 +722,9 @@ def chat():
 
     context_block = ("\n\nPatient health context:\n" + " ".join(context_parts)) if context_parts else ""
 
+    prior_convo = get_conversation_context(session_id)
+    prior_block = ("\n\n" + prior_convo) if prior_convo else ""
+
     prompt = (
         f"{AI_FRAMING_RULE}\n\n"
         "You are MyICE Health Assistant — a helpful, compassionate health information companion. "
@@ -708,6 +736,7 @@ def chat():
         "The app will convert this into a tap-to-call button automatically. "
         "If the number is not in their records, tell them politely and suggest they add it in the Care Team or Emergency Contacts section."
         + context_block
+        + prior_block
         + f"\n\nPatient question: {message}\n\n"
         "Provide helpful general background information. If the question requires a personal medical assessment, "
         "acknowledge the question warmly, provide relevant general information, and clearly direct them to their doctor or pharmacist. "
@@ -716,7 +745,9 @@ def chat():
 
     try:
         ai_text = aivm_call(prompt)
-        return jsonify({"success": True, "response": ai_text, "disclaimer": MEDICAL_DISCLAIMER})
+        if session_id:
+            save_to_session(session_id, message, ai_text)
+        return jsonify({"success": True, "response": ai_text, "disclaimer": MEDICAL_DISCLAIMER, "session_id": session_id})
     except Exception as e:
         print(f"  [chat] AIVM error: {e}")
         return jsonify({"error": "AI assistant unavailable right now. Please try again shortly.", "disclaimer": MEDICAL_DISCLAIMER}), 503

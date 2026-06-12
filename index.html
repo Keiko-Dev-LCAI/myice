@@ -2805,6 +2805,7 @@ let _aiChatHistory = []; // [{role:'user'|'ai', text, ts}]
 let _aiChatBusy    = false;
 let _voiceRecog    = null;
 let _voiceActive   = false;
+let _aiSessionId   = crypto.randomUUID(); // unique per browser session, reset on Clear
 
 function renderAiChatMessages() {
   const box = document.getElementById('ai-chat-messages');
@@ -2893,7 +2894,7 @@ async function sendAiChat() {
     const r = await fetch(`${BACKEND}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, context })
+      body: JSON.stringify({ message: text, context, session_id: _aiSessionId })
     });
     const d = await r.json();
     removeAiChatThinking();
@@ -2910,6 +2911,7 @@ async function sendAiChat() {
 
 function clearAiChat() {
   _aiChatHistory = [];
+  _aiSessionId   = crypto.randomUUID(); // reset session so AI has no memory of prior turns
   renderAiChatMessages();
 }
 
