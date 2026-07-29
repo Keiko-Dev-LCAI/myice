@@ -445,7 +445,7 @@ body.ob-open{overflow:hidden}
           </div>
           <div style="display:flex;align-items:flex-start;gap:16px;font-size:22px;color:var(--text-secondary);line-height:1.5">
             <span style="font-size:28px;flex-shrink:0">🔒</span>
-            <span><strong style="color:var(--text-primary)">Your data stays yours.</strong> Private records are encrypted. No ads. No data selling. No third parties.</span>
+            <span><strong style="color:var(--text-primary)">Your data stays yours.</strong> Most records live on your device. No ads and no data selling. Premium AI and blockchain backup send only the data those features need off your device — see Privacy for details.</span>
           </div>
           <div style="display:flex;align-items:flex-start;gap:16px;font-size:22px;color:var(--text-secondary);line-height:1.5">
             <span style="font-size:28px;flex-shrink:0">👨‍👩‍👧</span>
@@ -1078,9 +1078,8 @@ body.ob-open{overflow:hidden}
   <div class="card">
     <div class="card-title" style="font-size:24px">🔐 Your Privacy & How Data Is Stored</div>
     <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
-      <strong style="color:var(--text-primary)">Free users:</strong> All your data is stored only on your device, in your browser. Nothing is sent to any server. Nobody can see your records except you (and anyone you give your PIN to). The downside is that if you clear your browser or switch devices, the data does not move with you.<br><br>
-      <strong style="color:var(--accent)">Premium users:</strong> Your emergency data is backed up to the Lightchain blockchain. Your private health records are encrypted before they are stored — meaning only someone with your password can read them. Not even the app can read your private data without your password.<br><br>
-      MyICE does not sell your data, show you ads, or share anything with third parties. Your health information is yours.
+      <strong style="color:var(--text-primary)">Free users:</strong> Your vault is stored on your device (browser storage). If you do not use Premium AI or cloud backup, health records stay on that device. Anyone you share your PIN or account with can see them. Clearing the browser can erase local data — export a backup first.<br><br>
+      <strong style="color:var(--accent)">Premium users:</strong> You can back up to the Lightchain blockchain. <strong>Emergency data on the blockchain is public by design</strong> so first responders can open it without a password — only put what you want visible in an emergency. Other private vault data is encrypted with your password before upload. <strong>Premium AI features</strong> send the questions and health details needed for that feature to our app server and the Lightchain AI network so you can get an answer — that is not “device only.” We do not sell your data or show ads.
     </p>
   </div>
 
@@ -2188,14 +2187,14 @@ body.ob-open{overflow:hidden}
       <button class="btn btn-secondary" onclick="exportData()">⬇️ Export All Data (JSON)</button>
       <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">All data is stored privately on this device in browser storage. Nothing is sent to any server except transient AI analysis requests, which contain no personally identifying information.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Vault data is stored on this device by default. Premium AI and blockchain backup send limited data off-device when you use those features — see Terms → Your Data &amp; Privacy. Emergency on-chain data is public by design.</div>
   </div>
   <div class="card">
     <div class="card-title">ℹ️ About MyICE</div>
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.7">
       <p><strong style="color:var(--text-primary)">MyICE ⚕️</strong> is your personal health vault and emergency medical ID. ICE stands for <em>In Case of Emergency</em> — a standard recognized by paramedics, police, and ER doctors worldwide.</p>
       <br>
-      <p><strong style="color:var(--accent)">Your privacy is our core promise.</strong> All health data lives only on your device in browser localStorage. We never see it, store it, or sell it.</p>
+      <p><strong style="color:var(--accent)">Your privacy is our core promise.</strong> By default, your vault lives on your device. We do not sell your data or show ads. Premium AI and blockchain backup send limited data off-device when you use those features (see “Your Data &amp; Privacy” below).</p>
       <br>
       <p style="color:var(--warning)">⚠️ <strong>Not a substitute for medical advice.</strong> MyICE is an organizational tool. Always consult your healthcare provider for medical decisions. In an emergency, call 911.</p>
     </div>
@@ -2279,9 +2278,9 @@ body.ob-open{overflow:hidden}
   <div class="card">
     <div class="card-title">Is my data private?</div>
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
-      <p>Yes. <strong style="color:var(--accent)">All health data is stored on your device only</strong> — in your browser's local storage. It never leaves your phone or computer unless you explicitly share it. We have no server storing your records. No one at MyICE can see your data.</p>
+      <p><strong style="color:var(--accent)">Mostly on your device</strong> — the vault is kept in your browser’s local storage. It leaves your device when you use features that need the network: for example Premium AI (your question and related health details go to our server and AI network) or blockchain backup. <strong>Emergency data stored on-chain is public</strong> so responders can open it. We do not sell your data. We do not run a traditional “medical records database” of free-tier vaults on our side.</p>
       <br>
-      <p>The only time data leaves your device is when you use an AI feature (like Lab Analysis or Drug Interaction Check). In that case, only the specific text you submit is sent to our AI server for processing — and it is discarded immediately after. No personal information is retained on our servers.</p>
+      <p>Data also leaves your device when you use Premium AI (lab analysis, drug checks, health chat, etc.) or blockchain backup. AI requests include the details needed for that feature and go to our app server and the Lightchain AI network. Blockchain emergency fields are public. See “Your Data &amp; Privacy” in Terms for the full picture.</p>
     </div>
   </div>
 
@@ -2458,11 +2457,15 @@ body.ob-open{overflow:hidden}
   <div class="card">
     <div class="card-title">Your Data &amp; Privacy</div>
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
-      <p>All health data you enter into MyICE is stored <strong>on your device only</strong> using browser localStorage. We do not collect, transmit, store, or sell your personal health information.</p>
+      <p><strong>Default:</strong> Your vault is stored on your device using browser localStorage.</p>
       <br>
-      <p>When you use Premium AI features, the text you submit (such as lab results or symptom descriptions) is sent to our AI processing server solely for the purpose of generating a response. This data is processed in memory and discarded immediately — it is never logged, stored, or associated with any identity.</p>
-      <br>
-      <p>You are solely responsible for the security of your device and any PINs you set. We cannot recover lost data or reset PINs on your behalf.</p>
+      <p><strong>When data leaves your device:</strong></p>
+      <ul style="margin:8px 0 12px 18px;line-height:1.55">
+        <li><strong>Premium AI</strong> — questions and related health details (for example meds, conditions, lab text) are sent to our app server and the Lightchain AI network to generate a response. Do not use AI for anything you are unwilling to transmit.</li>
+        <li><strong>Blockchain backup (Premium)</strong> — <strong>emergency data on-chain is public</strong> so first responders can open it without a login. Only include what you want visible in an emergency. Other private backup data is encrypted with your password before upload.</li>
+        <li><strong>Account / sync</strong> — if you use login and cloud sync, backup data moves as described in the app for those features.</li>
+      </ul>
+      <p>We do not sell your personal health information or show third-party ads. You are responsible for your device, PINs, and password. We cannot recover lost local data or reset PINs for you.</p>
     </div>
   </div>
 
@@ -2471,7 +2474,7 @@ body.ob-open{overflow:hidden}
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
       <p><strong>MyICE is not a HIPAA-covered entity.</strong> The Health Insurance Portability and Accountability Act (HIPAA) applies to healthcare providers, health insurance plans, and healthcare clearinghouses — and the vendors that process data on their behalf. MyICE is a personal health organizer built for individual use. It is not affiliated with any healthcare provider or insurance company, and it does not receive, transmit, or process health information on behalf of any covered entity.</p>
       <br>
-      <p><strong>Your data is yours.</strong> All health information you enter into MyICE is stored on your own device or, for Premium users, encrypted and stored on the Lightchain blockchain under your control. MyICE does not access, view, sell, or share your health data with any third party.</p>
+      <p><strong>Your data is yours.</strong> Free use keeps the vault on your device. Premium blockchain backup and AI involve network services as described in “Your Data &amp; Privacy.” MyICE does not sell your health data. We are not a HIPAA-covered hospital system; this is a consumer self-service tool. Always call 911 in a real emergency and follow your clinician’s advice.</p>
       <br>
       <p><strong>FTC Health Breach Notification.</strong> Although HIPAA does not apply, MyICE is committed to complying with the Federal Trade Commission's Health Breach Notification Rule. In the unlikely event that your health data stored through MyICE were ever exposed due to a security breach, we would notify affected users promptly in accordance with that rule.</p>
       <br>
