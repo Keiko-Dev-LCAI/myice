@@ -11,9 +11,14 @@ import path from 'path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Config ────────────────────────────────────────────────────────────────────
+// NEVER hardcode keys — set in env only: export PRIVATE_KEY=0x… (or LIGHTCHAIN_PRIVATE_KEY)
 const RPC      = 'https://rpc.mainnet.lightchain.ai';
 const CHAIN_ID = 9200;
-const PRIV_KEY = (process.env.PRIVATE_KEY || process.env.LIGHTCHAIN_PRIVATE_KEY || "")  // scrubbed — use env;
+const PRIV_KEY = (process.env.PRIVATE_KEY || process.env.LIGHTCHAIN_PRIVATE_KEY || '').trim();
+if (!PRIV_KEY || !PRIV_KEY.startsWith('0x') || PRIV_KEY.length < 66) {
+  console.error('Missing PRIVATE_KEY (or LIGHTCHAIN_PRIVATE_KEY) env var. Never commit keys.');
+  process.exit(1);
+}
 
 // ── Compile with solc ─────────────────────────────────────────────────────────
 console.log('Compiling MyICEStore.sol...');
