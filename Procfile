@@ -1,1 +1,1 @@
-web: gunicorn myice-server:app --bind 0.0.0.0:$PORT --workers 2 --timeout 400
+web: gunicorn myice-server:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 400

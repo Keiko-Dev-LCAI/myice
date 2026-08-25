@@ -17,7 +17,12 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, origins="*")
+# Scoped CORS — override with CORS_ORIGINS env (comma-separated)
+_CORS_ORIGINS = [o.strip() for o in os.environ.get(
+    "CORS_ORIGINS",
+    "https://myice.win,http://localhost:5000,http://127.0.0.1:5000"
+).split(",") if o.strip()]
+CORS(app, origins=_CORS_ORIGINS)
 
 # ════════════════════════════════════════════════════════════════════════
 # CONVERSATION MEMORY (per-session, in-process)
