@@ -997,6 +997,8 @@ MYICE_STORE_ABI = [
      "inputs":[{"name":"user","type":"address"},{"name":"emergency","type":"bytes"},{"name":"priv","type":"bytes"}],"outputs":[]},
     {"name":"storeEmergencyFor","type":"function","stateMutability":"nonpayable",
      "inputs":[{"name":"user","type":"address"},{"name":"emergency","type":"bytes"}],"outputs":[]},
+    {"name":"deleteFor","type":"function","stateMutability":"nonpayable",
+     "inputs":[{"name":"user","type":"address"}],"outputs":[]},
     {"name":"deleteRecord","type":"function","stateMutability":"nonpayable",
      "inputs":[],"outputs":[]},
     {"name":"getEmergency","type":"function","stateMutability":"view",
@@ -1111,6 +1113,46 @@ def store_health():
         return jsonify({"success": True, "txHash": tx_hash})
     except Exception as e:
         print(f"  [store-health] error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/delete-health", methods=["POST"])
+def delete_health():
+    """
+    Gas-sponsored delete: clears the current on-chain health record for `address`.
+    Body: { address }
+    Rate-limited like store-health (1 per address / 5 min + per-IP).
+    Phase-1 tradeoff: trusts address in body (no user sig — hash-based accounts).
+    """
+    data         = request.get_json(silent=True) or {}
+    user_address = data.get("address", "").strip()
+    if not user_address:
+        return jsonify({"error": "address required"}), 400
+
+    ok, code, err = _gate_store(user_address)
+    if not ok:
+        return jsonify(err), code
+
+    try:
+        from web3 import Web3
+        user_address = Web3.to_checksum_address(user_address)
+    except Exception:
+        return jsonify({"error": "Invalid Ethereum address"}), 400
+
+    try:
+        ctx = get_store_contract()
+        if not ctx:
+            return jsonify({"error": "Store contract unavailable"}), 503
+        contract = ctx["contract"]
+        # Phase-1 contract exposes deleteFor; fall back message if old ABI on-chain
+        if not hasattr(contract.functions, "deleteFor"):
+            return jsonify({"error": "deleteFor not available on deployed contract — deploy Phase1 first"}), 501
+        fn = contract.functions.deleteFor(user_address)
+        tx_hash = send_store_tx(fn, extra_gas=200_000)
+        print(f"  [delete-health] deleted for {user_address} — tx: {tx_hash}")
+        return jsonify({"success": True, "txHash": tx_hash})
+    except Exception as e:
+        print(f"  [delete-health] error: {e}")
         return jsonify({"error": str(e)}), 500
 
 
