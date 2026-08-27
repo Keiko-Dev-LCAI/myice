@@ -991,7 +991,7 @@ def suggest_questions():
 # ON-CHAIN HEALTH VAULT (MyICEStore contract — gas sponsored by dApp wallet)
 # ════════════════════════════════════════════════════════════════════════
 
-MYICE_STORE_ADDRESS = "0x2902Ff4e773E3dEB8C193d77442CE22e7d96299a"
+MYICE_STORE_ADDRESS = "0x0089792c849C1c8313fCa17d34d46AA1de7849F1"
 MYICE_STORE_ABI = [
     {"name":"storeFor","type":"function","stateMutability":"nonpayable",
      "inputs":[{"name":"user","type":"address"},{"name":"emergency","type":"bytes"},{"name":"priv","type":"bytes"}],"outputs":[]},
