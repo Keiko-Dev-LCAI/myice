@@ -48,7 +48,150 @@ def save_to_session(session_id, user_msg, ai_response):
     _sessions[session_id].append({"user": user_msg, "assistant": ai_response})
     _sessions[session_id] = _sessions[session_id][-50:]
 
+
+# ════════════════════════════════════════════════════════════════════════
+# ABUSE GUARDS (local hardening build — 2026-08-26)
+# Rate limits + daily spend backstop. Signature/ownership proof for
+# hash-derived MyICE addresses is documented in SECURITY-HARDENING-REVIEW.md
+# (EOA migration needed for full ecrecover). These guards still stop drains.
+# ════════════════════════════════════════════════════════════════════════
+import threading as _threading
+from collections import defaultdict as _defaultdict
+
+_CHAT_RATE_PER_MIN = int(os.environ.get("CHAT_RATE_PER_MIN", "5"))
+_CHAT_RATE_PER_DAY = int(os.environ.get("CHAT_RATE_PER_DAY", "30"))
+_STORE_RATE_PER_5MIN = int(os.environ.get("STORE_RATE_PER_5MIN", "1"))
+_IP_RATE_PER_MIN = int(os.environ.get("IP_RATE_PER_MIN", "30"))
+_DAILY_LCAI_CAP = float(os.environ.get("DAILY_LCAI_CAP", "50"))
+_LCAI_PER_AI_JOB = float(os.environ.get("LCAI_PER_JOB", "0.02"))
+_MAX_CONCURRENT_AI = int(os.environ.get("MAX_CONCURRENT_JOBS", "8"))
+_PAYMENT_WALLET = os.environ.get("PAYMENT_WALLET", "0x6518fD26a7aD2Fe1bA80De5f279Ee59F55C0A9bA").lower()
+_PREMIUM_ENFORCE = os.environ.get("PREMIUM_ENFORCE", "false").lower() in ("1", "true", "yes")
+_PREMIUM_WHITELIST = {
+    w.strip().lower()
+    for w in os.environ.get("PREMIUM_WHITELIST", "").split(",")
+    if w.strip()
+}
+
+_guard_lock = _threading.Lock()
+_ip_hits = _defaultdict(list)          # ip -> [ts,...]
+_addr_ai_hits = _defaultdict(list)
+_addr_store_hits = _defaultdict(list)
+_spend_day = ""
+_spend_jobs = 0
+_active_ai = 0
+_used_nonces = {}  # key -> expiry ts
+
+def _client_ip():
+    fwd = request.headers.get("X-Forwarded-For", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.remote_addr or "0.0.0.0"
+
+def _prune(lst, window):
+    now = time.time()
+    return [t for t in lst if now - t < window]
+
+def _rate_ok(bucket, key, limit, window):
+    with _guard_lock:
+        lst = _prune(bucket[key], window)
+        if len(lst) >= limit:
+            bucket[key] = lst
+            return False
+        lst.append(time.time())
+        bucket[key] = lst
+        return True
+
+def _daily_cap_ok():
+    global _spend_day, _spend_jobs
+    day = time.strftime("%Y-%m-%d")
+    with _guard_lock:
+        if _spend_day != day:
+            _spend_day = day
+            _spend_jobs = 0
+        return (_spend_jobs * _LCAI_PER_AI_JOB) < _DAILY_LCAI_CAP
+
+def _record_ai_spend():
+    global _spend_jobs
+    with _guard_lock:
+        _spend_jobs += 1
+
+def _gate_ai(address: str = ""):
+    """Return (ok, http_code, error_dict)."""
+    ip = _client_ip()
+    if not _daily_cap_ok():
+        return False, 503, {"error": "Daily AI spend cap reached — try again tomorrow"}
+    if not _rate_ok(_ip_hits, ip, _IP_RATE_PER_MIN, 60):
+        return False, 429, {"error": "Too many requests from this IP"}
+    if address:
+        if not _rate_ok(_addr_ai_hits, address.lower(), _CHAT_RATE_PER_MIN, 60):
+            return False, 429, {"error": "Too many AI requests for this address"}
+        day_key = address.lower() + "|day"
+        if not _rate_ok(_addr_ai_hits, day_key, _CHAT_RATE_PER_DAY, 86400):
+            return False, 429, {"error": "Daily AI limit for this address"}
+    with _guard_lock:
+        global _active_ai
+        if _active_ai >= _MAX_CONCURRENT_AI:
+            return False, 503, {"error": "Server busy — try again shortly"}
+        _active_ai += 1
+    return True, 200, {}
+
+def _ai_done():
+    global _active_ai
+    with _guard_lock:
+        _active_ai = max(0, _active_ai - 1)
+
+def _gate_store(address: str):
+    ip = _client_ip()
+    if not _rate_ok(_ip_hits, "store|" + ip, _IP_RATE_PER_MIN, 60):
+        return False, 429, {"error": "Too many store requests from this IP"}
+    if not _rate_ok(_addr_store_hits, address.lower(), _STORE_RATE_PER_5MIN, 300):
+        return False, 429, {"error": "Store rate limit: 1 per address per 5 minutes"}
+    return True, 200, {}
+
+def _premium_ok(address: str) -> bool:
+    """Server-side premium check (whitelist + optional on-chain payment scan stub)."""
+    if not address:
+        return False
+    a = address.lower()
+    if a in _PREMIUM_WHITELIST:
+        return True
+    # Client may pass verifiedTxHash; we only accept if it paid PAYMENT_WALLET (best-effort).
+    # Full historical scan is expensive — premium is also re-checked at payment verify time
+    # and can be mirrored via PREMIUM_WHITELIST / future DB.
+    return False
+
+
 PORT = int(os.environ.get("PORT", 5000))
+
+@app.before_request
+def _before_ai_paths():
+    """Gate LCAI-spending AI routes. store-health has its own gate."""
+    path = request.path or ""
+    ai_prefixes = (
+        "/api/chat", "/api/analyze-labs", "/api/check-interactions",
+        "/api/explain-medication", "/api/analyze-document",
+        "/api/analyze-symptoms", "/api/suggest-questions",
+    )
+    if not any(path.startswith(p) for p in ai_prefixes):
+        return None
+    data = request.get_json(silent=True) or {}
+    addr = (data.get("address") or data.get("wallet") or "").strip()
+    # Close the address-less hole — AI routes must name a wallet
+    if not addr:
+        return jsonify({"error": "address required for AI endpoints"}), 400
+    ok, code, err = _gate_ai(addr)
+    if not ok:
+        return jsonify(err), code
+    # Hard 402 premium gate OFF by default until a durable premium store exists.
+    # Rate limits + daily LCAI cap still protect the sponsor wallet either way.
+    if _PREMIUM_ENFORCE and not TEST_MODE and not _premium_ok(addr):
+        _ai_done()
+        return jsonify({"error": "Premium required — server-side check"}), 402
+    request._myice_ai_gated = True
+    return None
+
+
 TEST_MODE = os.environ.get("MYICE_TEST_MODE", "").lower() in ("true", "1", "yes")
 
 MEDICAL_DISCLAIMER = (
@@ -932,6 +1075,12 @@ def store_health():
     if not user_address or not emergency_hex:
         return jsonify({"error": "address and emergencyData required"}), 400
 
+    ok, code, err = _gate_store(user_address)
+    if not ok:
+        return jsonify(err), code
+
+    # Ownership proof (EOA path): optional signature fields for V2 contract migration.
+    # Hash-derived MyICE addresses cannot ecrecover — see SECURITY-HARDENING-REVIEW.md.
     # Basic address validation
     try:
         from web3 import Web3
@@ -1030,6 +1179,17 @@ def serve_static_asset(asset):
     if os.path.isfile(path):
         return send_from_directory(_STATIC_DIR, safe)
     return jsonify({"error": "not found"}), 404
+
+
+@app.after_request
+def _after_ai_release(resp):
+    if getattr(request, "_myice_ai_gated", False):
+        if resp.status_code < 500:
+            # count spend on successful-ish responses (2xx/4xx after work may vary)
+            if 200 <= resp.status_code < 300:
+                _record_ai_spend()
+        _ai_done()
+    return resp
 
 # ════════════════════════════════════════════════════════════════════════
 # MAIN

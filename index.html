@@ -991,7 +991,7 @@ body.ob-open{overflow:hidden}
     <div class="card-title" style="font-size:24px">🌍 Access Your Records Anywhere in the World</div>
     <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
       MyICE is a web app — meaning you can open it on <strong style="color:var(--text-primary)">any phone, tablet, or computer, anywhere in the world</strong>, just by going to:<br>
-      <span style="font-family:monospace;font-size:17px;color:var(--accent)">keiko-dev-lcai.github.io/myice</span><br><br>
+      <span style="font-family:monospace;font-size:17px;color:var(--accent)">myice.win</span><br><br>
       <strong style="color:var(--text-primary)">Free users</strong> store data in their browser. This means your records are on that specific device. If you switch phones or clear your browser, the data stays behind.<br><br>
       <strong style="color:var(--accent)">Premium subscribers ($3/month in LCAI)</strong> get their data backed up to the blockchain — meaning you can log in from any device, anywhere, and your full health records are always there. If you lose your phone, travel overseas, or visit a specialist in another city, everything is still accessible.<br><br>
       <strong style="color:var(--text-primary)">Stay logged in while you browse:</strong> Once you log in, your session is remembered for the rest of that browser tab — even if you refresh the page. You will not need to log in again until you close the tab or tap Log Out. This works the same way as your bank or email.
@@ -1035,7 +1035,7 @@ body.ob-open{overflow:hidden}
     <div style="margin-top:16px;margin-bottom:8px;font-size:22px;font-weight:700;color:var(--text-primary)">🍎 iPhone (Safari only)</div>
     <ol style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0 0 16px 0">
       <li>Open <strong style="color:var(--text-primary)">Safari</strong> on your iPhone — it must be Safari, not Chrome</li>
-      <li>Go to <span style="font-family:monospace;color:var(--accent)">keiko-dev-lcai.github.io/myice</span></li>
+      <li>Go to <span style="font-family:monospace;color:var(--accent)">myice.win</span></li>
       <li>Tap the <strong style="color:var(--text-primary)">Share button</strong> at the bottom of the screen — it looks like a box with an arrow pointing up ⬆</li>
       <li>Scroll down in the share menu and tap <strong style="color:var(--text-primary)">"Add to Home Screen"</strong></li>
       <li>Tap <strong style="color:var(--text-primary)">Add</strong> in the top right corner</li>
@@ -1045,7 +1045,7 @@ body.ob-open{overflow:hidden}
     <div style="margin-top:8px;margin-bottom:8px;font-size:22px;font-weight:700;color:var(--text-primary)">🤖 Android (Chrome)</div>
     <ol style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0 0 16px 0">
       <li>Open <strong style="color:var(--text-primary)">Chrome</strong> on your Android phone</li>
-      <li>Go to <span style="font-family:monospace;color:var(--accent)">keiko-dev-lcai.github.io/myice</span></li>
+      <li>Go to <span style="font-family:monospace;color:var(--accent)">myice.win</span></li>
       <li>Tap the <strong style="color:var(--text-primary)">three-dot menu</strong> in the top right corner</li>
       <li>Tap <strong style="color:var(--text-primary)">"Add to Home Screen"</strong> or <strong style="color:var(--text-primary)">"Install App"</strong></li>
       <li>Tap <strong style="color:var(--text-primary)">Install</strong> or <strong style="color:var(--text-primary)">Add</strong></li>
@@ -1055,7 +1055,7 @@ body.ob-open{overflow:hidden}
     <div style="margin-top:8px;margin-bottom:8px;font-size:22px;font-weight:700;color:var(--text-primary)">🖥️ PC or Mac (Chrome or Edge)</div>
     <ol style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0 0 8px 0">
       <li>Open <strong style="color:var(--text-primary)">Chrome</strong> or <strong style="color:var(--text-primary)">Microsoft Edge</strong> on your computer</li>
-      <li>Go to <span style="font-family:monospace;color:var(--accent)">keiko-dev-lcai.github.io/myice</span></li>
+      <li>Go to <span style="font-family:monospace;color:var(--accent)">myice.win</span></li>
       <li>Look for a small <strong style="color:var(--text-primary)">install icon</strong> (⊕ or a computer with a down arrow) on the right side of the address bar — click it</li>
       <li>If you don't see the icon, click the <strong style="color:var(--text-primary)">three-dot menu</strong> (top right) → <strong style="color:var(--text-primary)">"Install MyICE"</strong> or <strong style="color:var(--text-primary)">"Install app"</strong></li>
       <li>Click <strong style="color:var(--text-primary)">Install</strong></li>
@@ -1079,7 +1079,7 @@ body.ob-open{overflow:hidden}
         <li>All 22 health sections — medications, allergies, conditions, vitals, documents, and more</li>
         <li>Emergency View — your medical ID for first responders, no login needed</li>
         <li>Call 911 and tap-to-call your emergency contacts from the Emergency tab</li>
-        <li>Cloud backup and sync across devices (requires a free account)</li>
+        <li>Manual emergency backup to blockchain (free account)</li>
         <li>Family profiles, care team, appointment tracking, and everything else</li>
       </ul>
     </div>
@@ -1221,7 +1221,7 @@ body.ob-open{overflow:hidden}
     <div class="card-title">Emergency Visibility — control what paramedics see</div>
     <p style="font-size:14px;color:var(--text-secondary);line-height:1.5;margin-bottom:12px">
       Items marked for Emergency View appear on the SOS screen without a login.
-      If you use <strong style="color:var(--text-primary)">Sync to Chain</strong>, those emergency fields are stored <strong style="color:var(--emergency)">publicly on the blockchain</strong> so first responders can open them. Only mark what you want public in an emergency.
+      If you use <strong style="color:var(--text-primary)">Sync to Chain</strong>, those emergency fields are <strong style="color:var(--accent)">encrypted</strong> before they go on-chain. First responders open them only by scanning your physical QR/NFC code, which carries the decrypt key. Only mark what you'd want a responder to see in an emergency.
     </p>
     <div id="prof-visibility-list" style="display:flex;flex-direction:column;gap:10px"></div>
   </div>
@@ -2310,9 +2310,9 @@ body.ob-open{overflow:hidden}
   <div class="card">
     <div class="card-title">Is my data private?</div>
     <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
-      <p><strong style="color:var(--accent)">Mostly on your device</strong> — the vault is kept in your browser’s local storage. It leaves your device when you use features that need the network: for example Premium AI (your question and related health details go to our server and AI network) or blockchain backup. <strong>Emergency data stored on-chain is public</strong> so responders can open it. We do not sell your data. We do not run a traditional “medical records database” of free-tier vaults on our side.</p>
+      <p><strong style="color:var(--accent)">Mostly on your device</strong> — the vault is kept in your browser’s local storage. It leaves your device when you use features that need the network: for example Premium AI (your question and related health details go to our server and AI network) or blockchain backup. <strong>Emergency data stored on-chain is encrypted</strong>; responders open it only with your QR/NFC code. We do not sell your data. We do not run a traditional “medical records database” of free-tier vaults on our side.</p>
       <br>
-      <p>Data also leaves your device when you use Premium AI (lab analysis, drug checks, health chat, etc.) or blockchain backup. AI requests include the details needed for that feature and go to our app server and the Lightchain AI network. Blockchain emergency fields are public. See “Your Data &amp; Privacy” in Terms for the full picture.</p>
+      <p>Data also leaves your device when you use Premium AI (lab analysis, drug checks, health chat, etc.) or blockchain backup. AI requests include the details needed for that feature and go to our app server and the Lightchain AI network. Blockchain emergency fields are encrypted (decrypt key is in your QR/NFC code, never on our servers). See “Your Data &amp; Privacy” in Terms for the full picture.</p>
     </div>
   </div>
 
@@ -5113,7 +5113,11 @@ async function runParamedicEmergencyFlow(frag) {
         return;
       } catch(e2) {}
     }
-    if (body) body.innerHTML = `<div style="padding:24px;font-size:20px;color:var(--emergency)"><strong>Could not decrypt emergency data.</strong><br><br>${esc(e.message||String(e))}<br><br>Check that the QR/NFC code is complete (address + key) and has not been regenerated.</div>`;
+    const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+    const msg = offline
+      ? 'Could not reach the network, and no offline copy of this emergency card is available on this device.'
+      : (e.message || String(e));
+    if (body) body.innerHTML = `<div style="padding:24px;font-size:20px;color:var(--emergency)"><strong>Could not load emergency data.</strong><br><br>${esc(msg)}<br><br>Check that the QR/NFC code is complete (address + key) and has not been regenerated. If you are offline, open this code once while online so this device can keep a last-known copy.</div>`;
   }
 }
 
@@ -5151,15 +5155,20 @@ function renderEmergencyCodeCard() {
     return;
   }
   const url = buildEmergencyCodeUrl(acct.address, key);
+  const urlJs = url.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   mount.innerHTML = `
     <p style="font-size:16px;color:var(--text-secondary);line-height:1.55;margin-bottom:12px">
-      Print or save this QR / write the link on a card. First responders scan it — <strong>no login</strong>.
+      Keep this on you — wallet, phone case, or an NFC tag. First responders scan it — <strong>no login</strong>.
       The decrypt key is in the link after <code>#</code> and is never sent to our servers.
     </p>
     <div id="emergency-qr-box" style="background:#fff;padding:12px;border-radius:12px;display:inline-block;margin-bottom:12px"></div>
     <div style="font-family:monospace;font-size:12px;word-break:break-all;color:var(--accent);margin-bottom:12px">${esc(url)}</div>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:10px">This shows exactly what a first responder sees when they scan your code.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>showToast('Emergency link copied'))">📋 Copy Link</button>
+      <button class="btn btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${urlJs}').then(()=>showToast('Emergency link copied'))">📋 Copy Link</button>
+      <button class="btn btn-secondary" onclick="printEmergencyWalletCard()">🖨️ Print wallet card</button>
+      <button class="btn btn-secondary" onclick="saveEmergencyQrPng()">💾 Save QR image</button>
+      <button class="btn btn-primary" onclick="testMyEmergencyCard()">🔍 Test my card</button>
       <button class="btn btn-danger" onclick="regenerateEmergencyCode()">🔄 Regenerate Code</button>
     </div>`;
   const box = document.getElementById('emergency-qr-box');
@@ -5169,6 +5178,82 @@ function renderEmergencyCodeCard() {
   } else if (box) {
     box.innerHTML = '<div style="color:#000;font-size:12px;max-width:180px">QR library loading… copy the link instead.</div>';
   }
+}
+
+function testMyEmergencyCard() {
+  const acct = getAccount();
+  const key = getStoredEmergencyKey();
+  if (!acct || !acct.address || !key) {
+    showToast('Generate/sync an emergency code first');
+    return;
+  }
+  const url = buildEmergencyCodeUrl(acct.address, key);
+  window.open(url, '_blank', 'noopener');
+}
+
+function _emergencyQrDataUrl() {
+  const box = document.getElementById('emergency-qr-box');
+  if (!box) return '';
+  const canvas = box.querySelector('canvas');
+  if (canvas && canvas.toDataURL) return canvas.toDataURL('image/png');
+  const img = box.querySelector('img');
+  return img ? img.src : '';
+}
+
+function saveEmergencyQrPng() {
+  const data = _emergencyQrDataUrl();
+  if (!data) { showToast('QR not ready yet'); return; }
+  const a = document.createElement('a');
+  a.href = data;
+  a.download = 'myice-emergency-qr.png';
+  a.click();
+}
+
+function printEmergencyWalletCard() {
+  const acct = getAccount();
+  const key = getStoredEmergencyKey();
+  if (!acct || !acct.address || !key) {
+    showToast('Generate/sync an emergency code first');
+    return;
+  }
+  const url = buildEmergencyCodeUrl(acct.address, key);
+  const w = window.open('', '_blank', 'noopener,width=480,height=720');
+  if (!w) { showToast('Pop-up blocked — allow pop-ups to print'); return; }
+  w.document.write(`<!DOCTYPE html><html><head><title>MyICE Emergency Card</title>
+<style>
+  @page { size: auto; margin: 8mm; }
+  body { font-family: system-ui, sans-serif; background:#fff; color:#000; margin:0; padding:16px; }
+  .card { width: 85.6mm; max-width: 100%; border: 2px solid #000; border-radius: 8px; padding: 12px; box-sizing: border-box; }
+  h1 { font-size: 14px; margin: 0 0 8px; letter-spacing: 0.04em; }
+  .sub { font-size: 11px; margin: 0 0 10px; }
+  #pq { display:flex; justify-content:center; margin: 8px 0 10px; }
+  .link { font-family: ui-monospace, monospace; font-size: 8px; word-break: break-all; }
+  .note { font-size: 9px; margin-top: 10px; }
+  @media print { body { padding: 0; } .noprint { display:none !important; } }
+</style></head><body>
+  <div class="noprint" style="margin-bottom:12px">
+    <button onclick="window.print()">Print</button>
+  </div>
+  <div class="card">
+    <h1>MEDICAL EMERGENCY — SCAN FOR MY INFO</h1>
+    <p class="sub">No login needed. Scan the QR with any phone camera.</p>
+    <div id="pq"></div>
+    <div class="link" id="plink"></div>
+    <p class="note">Keep this on you (wallet, phone case). Regenerating your code voids this card.</p>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script>
+    const url = ${JSON.stringify(url)};
+    document.getElementById('plink').textContent = url;
+    function draw() {
+      if (typeof QRCode === 'undefined') { setTimeout(draw, 50); return; }
+      new QRCode(document.getElementById('pq'), { text: url, width: 320, height: 320, correctLevel: QRCode.CorrectLevel.M });
+      setTimeout(function(){ window.print(); }, 400);
+    }
+    draw();
+  <\/script>
+</body></html>`);
+  w.document.close();
 }
 
 
