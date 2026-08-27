@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MyICE ⚕️ — Personal Health Vault</title>
-<!-- v46.33-audit-log-sync -->
+<!-- v46.34-owner-permissions -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2174,6 +2174,7 @@ body.ob-open{overflow:hidden}
 
   <div class="card">
     <div class="card-title">👥 Who Has Access</div>
+    <p style="font-size:16px;color:var(--text-muted);margin-bottom:10px">Helpers can view and update health info. Only the Primary Owner can delete records, clear the Access Log, erase blockchain data, or manage people. <em>Note: everyone still shares one account password — these limits guide normal use; they are not a cryptographic wall.</em></p>
     <p style="font-size:20px;color:var(--text-secondary);margin-bottom:16px">Everyone logs in with the same account password. Each person gets their own PIN — used only to identify who made changes in the Access Log.</p>
     <div id="identities-list" style="margin-bottom:16px"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
@@ -2611,9 +2612,15 @@ async function restoreSessionFromStorage() {
     _sessionKey          = aesKey;
     _sessionAddr         = data.address;
     _sessionLoggedIn     = true;
-    sessionAuth          = 'owner';
     _currentIdentityId   = data.identityId   || '';
     _currentIdentityName = data.identityName || '';
+    migrateIdentityRoles();
+    if (_currentIdentityId && _currentIdentityId !== 'unknown') {
+      const id = getIdentities().find(x => x.id === _currentIdentityId);
+      applyIdentityRole(id || { role: 'helper' });
+    } else {
+      sessionAuth = 'caregiver';
+    }
     return true;
   } catch(e) {
     console.log('[session] restore failed:', e);
@@ -2633,10 +2640,64 @@ function getIdentities() {
 }
 function saveIdentities(ids) { localStorage.setItem(IDENTITIES_KEY, JSON.stringify(ids)); }
 
+function pinOverlapsExisting(newPin, identities, excludeId) {
+  const pins = (identities || []).filter(id => id.id !== excludeId).map(id => String(id.pin || ''));
+  for (const p of pins) {
+    if (!p) continue;
+    if (p === newPin) return 'exact';
+    if (p.startsWith(newPin) || newPin.startsWith(p)) return 'prefix';
+  }
+  return null;
+}
+
+function getPrimaryOwner() {
+  return getIdentities().find(id => id.role === 'owner') || null;
+}
+
+function applyIdentityRole(identity) {
+  if (!identity) {
+    sessionAuth = 'caregiver';
+    return;
+  }
+  sessionAuth = (identity.role === 'owner') ? 'owner' : 'caregiver';
+}
+
+/** One-time migration: ensure exactly one Primary Owner among identities. */
+function migrateIdentityRoles() {
+  const ids = getIdentities();
+  if (!ids.length) return;
+  let changed = false;
+  ids.forEach(id => {
+    if (!id.role) { id.role = 'helper'; changed = true; }
+  });
+  if (!ids.some(id => id.role === 'owner')) {
+    // Prefer currently active identity, else first
+    let primary = ids.find(id => id.id === _currentIdentityId) || ids[0];
+    ids.forEach(id => { id.role = (id.id === primary.id) ? 'owner' : 'helper'; });
+    changed = true;
+    // Prompt once if multiple people — soft toast
+    if (ids.length > 1) {
+      setTimeout(() => {
+        showToast('👑 ' + primary.name + ' is Primary Owner. Helpers can view/update but not delete or manage people. Change roles in Settings if needed.', 7000);
+      }, 1200);
+    }
+  }
+  // Enforce single owner
+  let seenOwner = false;
+  ids.forEach(id => {
+    if (id.role === 'owner') {
+      if (seenOwner) { id.role = 'helper'; changed = true; }
+      else seenOwner = true;
+    }
+  });
+  if (changed) saveIdentities(ids);
+}
+
 let _idPinBuffer  = '';
 let _identityCallback = null;
 
 function showIdentityModal(cb) {
+  migrateIdentityRoles();
   _identityCallback = cb;
   _idPinBuffer = '';
   updateIdDots();
@@ -2666,29 +2727,35 @@ function idPinPress(k) {
   if(_idPinBuffer.length>=6) return;
   _idPinBuffer += k;
   updateIdDots();
-  // Check for match
   const ids = getIdentities();
+  // With prefix-free PINs, exact match is unambiguous
   const match = ids.find(id => id.pin === _idPinBuffer);
   const nameEl = document.getElementById('identity-name-display');
   if(match) {
-    nameEl.textContent = '✅ ' + match.name;
+    // Wait if any longer PIN still has this as prefix (should not happen if prefix-free)
+    const longerWaiting = ids.some(id => id.pin !== match.pin && id.pin.startsWith(_idPinBuffer));
+    if (longerWaiting) {
+      nameEl.textContent = '👤 …';
+      return;
+    }
+    nameEl.textContent = '✅ ' + match.name + (match.role === 'owner' ? ' (Owner)' : ' (Helper)');
     setTimeout(() => {
       _currentIdentityId   = match.id;
       _currentIdentityName = match.name;
+      applyIdentityRole(match);
       saveSessionToStorage();
-      auditLog('login', 'Account', 'Identified as ' + match.name);
+      auditLog('login', 'Account', 'Identified as ' + match.name + ' (' + (match.role || 'helper') + ')');
       closeIdentityModal();
+      try { loadSettingsPage(); } catch(e) {}
       if(_identityCallback) { const cb=_identityCallback; _identityCallback=null; cb(); }
     }, 600);
   } else {
-    // Show partial match hint if any identity starts with this prefix
     const partial = ids.find(id => id.pin.startsWith(_idPinBuffer));
     if(partial) {
       nameEl.textContent = '👤 ' + partial.name + '…';
       document.getElementById('identity-error').textContent = '';
     } else {
       nameEl.textContent = '';
-      // If 4+ digits entered with no partial match, show error for Premium users
       if(_idPinBuffer.length >= 4 && isPremium()) {
         document.getElementById('identity-error').textContent = 'PIN not recognized. Ask the account owner to add your PIN in Settings → Who Has Access.';
       } else {
@@ -2701,9 +2768,11 @@ function idPinPress(k) {
 function identitySkip() {
   _currentIdentityId   = 'unknown';
   _currentIdentityName = 'Unknown';
+  sessionAuth = 'caregiver'; // least privilege — never owner
   saveSessionToStorage();
-  auditLog('login', 'Account', 'Logged in without identifying');
+  auditLog('login', 'Account', 'Logged in without identifying (Helper access)');
   closeIdentityModal();
+  try { loadSettingsPage(); } catch(e) {}
   if(_identityCallback) { const cb=_identityCallback; _identityCallback=null; cb(); }
 }
 
@@ -2746,60 +2815,129 @@ function savePinCreationRequired() {
   if(!name) { errEl.textContent = 'Please enter your name.'; return; }
   if(!pin || pin.length < 4 || !/^\d+$/.test(pin)) { errEl.textContent = 'PIN must be 4–6 digits (numbers only).'; return; }
   const ids = getIdentities();
-  if(ids.find(id => id.pin === pin)) { errEl.textContent = 'That PIN is already taken. Choose a different one.'; return; }
-  const newEntry = { id: uid(), name, pin };
+  const overlap = pinOverlapsExisting(pin, ids);
+  if(overlap === 'exact') { errEl.textContent = 'That PIN is already taken. Choose a different one.'; return; }
+  if(overlap === 'prefix') { errEl.textContent = 'That PIN overlaps another saved PIN — choose a different one.'; return; }
+  const role = ids.some(id => id.role === 'owner') ? 'helper' : 'owner';
+  const newEntry = { id: uid(), name, pin, role };
   ids.push(newEntry);
   saveIdentities(ids);
   _currentIdentityId   = newEntry.id;
   _currentIdentityName = newEntry.name;
+  applyIdentityRole(newEntry);
   saveSessionToStorage();
-  auditLog('login', 'Account', 'Created identity PIN for ' + name);
+  auditLog('login', 'Account', 'Created identity PIN for ' + name + ' (' + role + ')');
   document.getElementById('pin-creation-required-overlay').remove();
-  showToast('✅ PIN created! Welcome, ' + name + '.');
+  showToast('✅ PIN created! Welcome, ' + name + (role==='owner'?' (Primary Owner)':'') + '.');
+  try { loadSettingsPage(); } catch(e) {}
   if(window._pcrCallback) { const cb = window._pcrCallback; window._pcrCallback = null; cb(); }
 }
 
 function addIdentity() {
+  if (!isOwner()) { showToast('Only the Primary Owner can add people'); return; }
   const name = document.getElementById('new-identity-name').value.trim();
   const pin  = document.getElementById('new-identity-pin').value.trim();
   const msg  = document.getElementById('identity-msg');
   if(!name) { msg.style.color='var(--emergency)'; msg.textContent='Enter a name.'; return; }
   if(!pin || pin.length < 4 || !/^\d+$/.test(pin)) { msg.style.color='var(--emergency)'; msg.textContent='PIN must be 4–6 digits.'; return; }
   const ids = getIdentities();
-  if(ids.find(id => id.pin === pin)) { msg.style.color='var(--emergency)'; msg.textContent='That PIN is already taken.'; return; }
-  ids.push({ id: uid(), name, pin });
+  const overlap = pinOverlapsExisting(pin, ids);
+  if(overlap === 'exact') { msg.style.color='var(--emergency)'; msg.textContent='That PIN is already taken.'; return; }
+  if(overlap === 'prefix') { msg.style.color='var(--emergency)'; msg.textContent='That PIN overlaps another saved PIN — choose a different one.'; return; }
+  const role = ids.some(id => id.role === 'owner') ? 'helper' : 'owner';
+  ids.push({ id: uid(), name, pin, role });
   saveIdentities(ids);
   document.getElementById('new-identity-name').value='';
   document.getElementById('new-identity-pin').value='';
-  msg.style.color='var(--success)'; msg.textContent=name+' added. ✓';
+  msg.style.color='var(--success)'; msg.textContent=name+' added as '+(role==='owner'?'Primary Owner':'Helper')+'. ✓';
   renderIdentitiesList();
 }
 
 function removeIdentity(id) {
+  if (!isOwner()) { showToast('Only the Primary Owner can remove people'); return; }
+  const ids = getIdentities();
+  const target = ids.find(x => x.id === id);
+  if (target && target.role === 'owner') {
+    showToast('Primary Owner cannot be removed');
+    return;
+  }
   if(!confirm('Remove this person from the access list?')) return;
-  const ids = getIdentities().filter(x=>x.id!==id);
+  saveIdentities(ids.filter(x=>x.id!==id));
+  renderIdentitiesList();
+}
+
+function setIdentityRole(id, role) {
+  if (!isOwner()) { showToast('Only the Primary Owner can change roles'); return; }
+  const ids = getIdentities();
+  const target = ids.find(x => x.id === id);
+  if (!target) return;
+  if (target.role === 'owner' && role !== 'owner') {
+    showToast('Primary Owner cannot be demoted');
+    return;
+  }
+  if (role === 'owner') {
+    ids.forEach(x => { x.role = (x.id === id) ? 'owner' : (x.role === 'owner' ? 'helper' : (x.role || 'helper')); });
+  } else {
+    target.role = 'helper';
+  }
   saveIdentities(ids);
   renderIdentitiesList();
+  // If we changed our own role, refresh power
+  if (_currentIdentityId === id) {
+    applyIdentityRole(ids.find(x => x.id === id));
+    saveSessionToStorage();
+    loadSettingsPage();
+  }
 }
 
 function renderIdentitiesList() {
   const el = document.getElementById('identities-list');
   if(!el) return;
-  const ids = getIdentities();
-  if(!ids.length) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:20px;padding:12px 0">No people added yet. Add yourself first.</div>';
+  migrateIdentityRoles();
+  // Helpers cannot manage people
+  const card = el.closest('.card') || el.parentElement;
+  if (!isOwner()) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:18px;padding:8px 0">Only the Primary Owner can manage people and roles. You can view and update health info as a Helper.</div>';
+    const addRow = document.getElementById('new-identity-name');
+    if (addRow && addRow.closest('div')) {
+      const wrap = addRow.closest('.card');
+      // hide add controls if present
+    }
+    const msg = document.getElementById('identity-msg');
+    // Disable add UI
+    ['new-identity-name','new-identity-pin'].forEach(id => {
+      const i = document.getElementById(id); if (i) i.disabled = true;
+    });
     return;
   }
-  el.innerHTML = ids.map(id => `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-hover);border-radius:8px;margin-bottom:8px">
+  ['new-identity-name','new-identity-pin'].forEach(id => {
+    const i = document.getElementById(id); if (i) i.disabled = false;
+  });
+  const ids = getIdentities();
+  if(!ids.length) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:20px;padding:12px 0">No people added yet. Add yourself first — you will be Primary Owner.</div>';
+    return;
+  }
+  el.innerHTML = ids.map(id => {
+    const isPrimary = id.role === 'owner';
+    const roleLabel = isPrimary ? '👑 Primary Owner' : '🤝 Helper';
+    const roleControls = isPrimary
+      ? '<span style="font-size:14px;color:var(--text-muted)">Locked</span>'
+      : `<select onchange="setIdentityRole('${id.id}', this.value)" style="font-size:14px;padding:4px 8px;border-radius:6px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border)">
+           <option value="helper" ${id.role!=='owner'?'selected':''}>Helper</option>
+           <option value="owner">Make Primary Owner</option>
+         </select>`;
+    const removeBtn = isPrimary ? '' : `<button onclick="removeIdentity('${id.id}')" class="btn btn-danger btn-sm">Remove</button>`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-hover);border-radius:8px;margin-bottom:8px;flex-wrap:wrap">
       <div style="font-size:28px">👤</div>
-      <div style="flex:1">
-        <div style="font-size:24px;font-weight:700">${esc(id.name)}</div>
-        <div style="font-size:18px;color:var(--text-muted)">PIN: ${'•'.repeat(id.pin.length)}</div>
+      <div style="flex:1;min-width:120px">
+        <div style="font-size:22px;font-weight:700">${esc(id.name)}</div>
+        <div style="font-size:16px;color:var(--text-muted)">PIN: ${'•'.repeat((id.pin||'').length)} · ${roleLabel}</div>
       </div>
-      <button onclick="removeIdentity('${id.id}')" class="btn btn-danger btn-sm">Remove</button>
-    </div>
-  `).join('');
+      ${roleControls}
+      ${removeBtn}
+    </div>`;
+  }).join('');
 }
 
 // ── AUDIT LOG ─────────────────────────────────────────────────────────────────
@@ -3261,8 +3399,27 @@ function isPremium() {
 // ── PIN SYSTEM ──
 function requireAuth(cb) {
   const s = getSettings();
-  // Account login always satisfies auth — no PIN asked after logging in
-  if (_sessionLoggedIn) { sessionAuth='owner'; cb(); return; }
+  // Logged into shared account: power comes from identity PIN, not the password
+  if (_sessionLoggedIn) {
+    migrateIdentityRoles();
+    // Already identified this session
+    if (_currentIdentityId && _currentIdentityId !== 'unknown') {
+      const id = getIdentities().find(x => x.id === _currentIdentityId);
+      applyIdentityRole(id || { role: 'helper' });
+      cb();
+      return;
+    }
+    // Not identified yet — ask at the pad (or least privilege if no identities)
+    const ids = getIdentities();
+    if (ids.length > 0) {
+      showIdentityModal(() => { cb(); });
+      return;
+    }
+    // No identities configured: keep least privilege until an owner PIN is created
+    sessionAuth = 'caregiver';
+    cb();
+    return;
+  }
   // If an account exists, require account login — old PIN no longer bypasses this
   const acct = getAccount();
   if (acct) {
@@ -3271,7 +3428,7 @@ function requireAuth(cb) {
     openAcctModal();
     return;
   }
-  // No account set up — fall back to old PIN behavior for local-only users
+  // No account — local-only guest: treat as owner of this device vault
   if (!s.ownerPin && !s.caregiverPin) { sessionAuth='owner'; cb(); return; }
   if (sessionAuth) { cb(); return; }
   pinCallback = cb;
@@ -3332,7 +3489,7 @@ function checkPin() {
 }
 
 function pinSkip() {
-  sessionAuth = 'owner';
+  sessionAuth = 'caregiver'; // least privilege
   document.getElementById('pin-modal').classList.remove('visible');
   if(pinCallback) { const cb=pinCallback; pinCallback=null; cb(); }
 }
@@ -4726,6 +4883,7 @@ function exportData() {
   const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`myice-export-${new Date().toISOString().slice(0,10)}.json`; a.click(); URL.revokeObjectURL(url);
 }
 function clearAllData() {
+  if (!isOwner()) { showToast('Only the Primary Owner can clear all data'); return; }
   if(!confirm('DELETE ALL DATA for this profile? This cannot be undone.')) return;
   if(!confirm('Are you absolutely sure? All health data will be permanently erased.')) return;
   Object.keys(localStorage).filter(k=>k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k=>localStorage.removeItem(k));
@@ -4733,6 +4891,7 @@ function clearAllData() {
 }
 
 async function eraseBlockchainRecord() {
+  if (!isOwner()) { showToast('Only the Primary Owner can erase the blockchain record'); return; }
   const notice =
     'Erase my blockchain record?\n\n' +
     'This will remove your stored record from the blockchain and destroy the key that unlocks your ' +
@@ -4812,6 +4971,7 @@ function init() {
   // Paramedic / emergency-code entry (hash fragment carries decrypt key)
   if (maybeStartParamedicMode()) return;
   window.addEventListener('hashchange', () => { maybeStartParamedicMode(); });
+  try { migrateIdentityRoles(); } catch(e) {}
 
   // Owner mode URL activation: visiting app with ?owner=1 sets permanent Premium
   const _params = new URLSearchParams(window.location.search);
@@ -5444,7 +5604,8 @@ async function doCreateAccount() {
     _sessionKey = aesKey;
     _sessionAddr = address;
     _sessionLoggedIn = true;
-    sessionAuth = 'owner';
+    sessionAuth = 'caregiver'; // power set after identity PIN
+    _currentIdentityId = ''; _currentIdentityName = '';
     await saveSessionToStorage();
 
     errEl.textContent = '';
@@ -5500,7 +5661,7 @@ async function doLogin() {
       _sessionKey  = aesKey;
       _sessionAddr = address;
       _sessionLoggedIn = true;
-      sessionAuth = 'owner';
+      sessionAuth = 'caregiver'; // power follows identity PIN
       if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
       await saveSessionToStorage();
       closeAcctModal();
@@ -5534,8 +5695,9 @@ async function doLogin() {
     _sessionKey = await deriveAESKey(password, acct.username);
     _sessionAddr = acct.address;
     _sessionLoggedIn = true;
-    // Account login also satisfies PIN requirement — no second login needed
-    sessionAuth = 'owner';
+    // Power follows identity PIN — least privilege until identified
+    sessionAuth = 'caregiver';
+    _currentIdentityId = ''; _currentIdentityName = '';
     if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
     await saveSessionToStorage();
     closeAcctModal();
@@ -5680,7 +5842,7 @@ async function doBiometricLogin() {
     _sessionKey      = aesKey;
     _sessionAddr     = stored.address;
     _sessionLoggedIn = true;
-    sessionAuth      = 'owner';
+    sessionAuth = 'caregiver'; // power follows identity PIN
     if(pinCallback) { const cb=pinCallback; pinCallback=null; setTimeout(cb,100); }
     await saveSessionToStorage();
     closeAcctModal();
