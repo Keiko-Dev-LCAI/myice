@@ -240,7 +240,10 @@
       "type": "function"
     }
   ],
-  "deployedAt": "2026-08-27T11:24:20Z",
+  "sponsor": "0xbb0ab4c9E15a20661CA0C4d2b6f5D32A7EdF7646",
   "contract": "MyICEStorePhase1",
-  "sponsor": "0xbb0ab4c9E15a20661CA0C4d2b6f5D32A7EdF7646"
+  "previousAddress": "0x2902Ff4e773E3dEB8C193d77442CE22e7d96299a",
+  "deployTx": "d9dd1f03cbf8b0baac6d52193e676b95e431a1e0e21b9e614d9b98724522023b",
+  "deployedAt": "2026-08-27T11:24:20Z",
+  "chainId": 9200
 }
