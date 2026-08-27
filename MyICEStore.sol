@@ -5,7 +5,8 @@ pragma solidity ^0.8.0;
  * MyICEStore — On-chain health data vault
  *
  * Two-tier storage per user address:
- *   emergency  — publicly readable, unencrypted (blood type, allergies, DNR, contacts)
+ *   emergency  — opaque bytes; client encrypts AES-256-GCM with a key carried in QR/NFC
+ *                (URL fragment). Contract stays blind — getEmergency returns ciphertext.
  *   private    — AES-256-GCM encrypted blob, only owner can decrypt with their password
  *
  * storeFor() is open — anyone can store for any address.
