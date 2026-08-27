@@ -73,7 +73,14 @@ contract MyICEStorePhase1 {
         emit RecordStored(user, uint64(block.timestamp));
     }
 
-    /// Users delete their own data (they sign this tx themselves)
+    /// Sponsor-gated delete for hash-based accounts (app wallet acts on user's behalf)
+    function deleteFor(address user) external onlySponsor {
+        require(user != address(0), "bad user");
+        delete records[user];
+        emit RecordDeleted(user);
+    }
+
+    /// Users with real EOAs can delete their own data (they sign this tx themselves)
     function deleteRecord() external {
         delete records[msg.sender];
         emit RecordDeleted(msg.sender);

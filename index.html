@@ -2218,8 +2218,9 @@ body.ob-open{overflow:hidden}
     <div style="display:flex;gap:12px;flex-wrap:wrap">
       <button class="btn btn-secondary" onclick="exportData()">⬇️ Export All Data (JSON)</button>
       <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
+      <button class="btn btn-danger" onclick="eraseBlockchainRecord()">🧹 Erase my blockchain record</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Vault data is stored on this device by default. Premium AI and blockchain backup send limited data off-device when you use those features — see Terms → Your Data &amp; Privacy. Emergency on-chain data is encrypted; the decrypt key lives in your QR/NFC code.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Vault data is stored on this device by default. Premium AI and blockchain backup send limited data off-device when you use those features — see Terms → Your Data &amp; Privacy. Emergency on-chain data is encrypted; the decrypt key lives in your QR/NFC code. “Clear All Data” is local-only; “Erase my blockchain record” also clears the chain entry and destroys the emergency key.</div>
   </div>
   <div class="card">
     <div class="card-title">ℹ️ About MyICE</div>
@@ -4663,6 +4664,61 @@ function clearAllData() {
   if(!confirm('Are you absolutely sure? All health data will be permanently erased.')) return;
   Object.keys(localStorage).filter(k=>k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k=>localStorage.removeItem(k));
   sessionAuth=null; location.reload();
+}
+
+async function eraseBlockchainRecord() {
+  const notice =
+    'Erase my blockchain record?\n\n' +
+    'This will remove your stored record from the blockchain and destroy the key that unlocks your ' +
+    'emergency data, so it can no longer be read. Your local data on this device will also be erased.\n\n' +
+    'One thing to know: blockchains keep a permanent history, so an encrypted trace of past data may ' +
+    'still exist in that history and cannot be un-published. Destroying the key means that trace stays ' +
+    'permanently scrambled and unreadable. This cannot be undone — export a backup first if you might ' +
+    'want your data later.\n\n' +
+    'OK = Erase everything\nCancel = go back (use Export backup first if needed)';
+  if (!confirm(notice)) return;
+  if (!confirm('Final confirmation: erase on-chain record, destroy emergency key, and wipe this device?')) return;
+
+  const acct = getAccount();
+  const addr = (acct && acct.address) || _sessionAddr;
+  let txHash = null;
+  if (addr) {
+    try {
+      showToast('Erasing on-chain record…', 6000);
+      const resp = await fetch(`${BACKEND}/api/delete-health`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: addr })
+      });
+      const result = await resp.json();
+      if (!resp.ok || !result.success) {
+        const msg = (result && result.error) || ('HTTP ' + resp.status);
+        if (!confirm('On-chain erase failed: ' + msg + '\n\nContinue with local wipe + key destroy anyway?')) return;
+      } else {
+        txHash = result.txHash || null;
+      }
+    } catch (e) {
+      if (!confirm('On-chain erase error: ' + e.message + '\n\nContinue with local wipe + key destroy anyway?')) return;
+    }
+  } else {
+    showToast('No account address — wiping local data and emergency key only', 4000);
+  }
+
+  // Crypto-shred: destroy emergency key (+ any cached plaintext emergency)
+  try {
+    localStorage.removeItem(EMERGENCY_KEY_LS);
+    if (addr) localStorage.removeItem(EM_CACHE_LS + addr.toLowerCase());
+    // Also clear any other profile emergency caches
+    Object.keys(localStorage).filter(k => k.startsWith(EM_CACHE_LS)).forEach(k => localStorage.removeItem(k));
+  } catch (e) {}
+
+  // Wipe local vault (same as clearAllData local path)
+  Object.keys(localStorage).filter(k => k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k => localStorage.removeItem(k));
+  try { localStorage.removeItem(ACCT_KEY); } catch (e) {}
+  _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null;
+
+  showToast(txHash ? ('✅ Blockchain record erased · key destroyed · local wipe done') : ('✅ Emergency key destroyed · local wipe done'), 5000);
+  setTimeout(() => location.reload(), 800);
 }
 
 // ── GENERIC DELETE HELPER ──

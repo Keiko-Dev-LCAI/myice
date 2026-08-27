@@ -54,3 +54,11 @@ New contract = new address → update `STORE_ADDR` / `MYICE_STORE_ADDRESS` → u
 ### Future (not built)
 1. Durable premium DB (verify payment → persist address) so 402 gate can be enforced.
 2. Account migration to real secp256k1 / EOAs so `MyICEStoreV2` becomes deployable.
+
+## On-chain delete + crypto-shred (2026-08-26)
+
+- Phase1 adds `deleteFor(address)` (sponsor-only).
+- Server: `POST /api/delete-health` (same rate limit as store).
+- Frontend: Settings → **Erase my blockchain record** = delete on-chain + destroy emergency key + local wipe, with honest permanence notice.
+- Residual (phase-1): endpoint trusts `address` in body (no user sig) — same as store-health until EOA migration.
+- Deploys with Phase1 contract cutover (not alone). Live contract today has no `deleteFor` until that deploy.
