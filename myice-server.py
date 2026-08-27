@@ -13,7 +13,7 @@ import time
 import secrets
 import base64
 from urllib.parse import quote as url_quote
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -1005,6 +1005,31 @@ def get_health():
         print(f"  [get-health] error: {e}")
         return jsonify({"error": str(e)}), 500
 
+
+
+
+# ── Static / SPA helpers (emergency QR path /e) ───────────────────────────────
+_STATIC_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.route("/e")
+@app.route("/e/")
+def serve_emergency_spa():
+    """Serve the PWA shell for emergency QR links. Key stays in URL fragment (never POSTed)."""
+    return send_from_directory(_STATIC_DIR, "index.html")
+
+@app.route("/")
+def serve_index():
+    return send_from_directory(_STATIC_DIR, "index.html")
+
+
+@app.route("/<path:asset>")
+def serve_static_asset(asset):
+    # Allow QR/lib-less local testing of icons/manifest/apk from same origin
+    safe = os.path.basename(asset)
+    path = os.path.join(_STATIC_DIR, safe)
+    if os.path.isfile(path):
+        return send_from_directory(_STATIC_DIR, safe)
+    return jsonify({"error": "not found"}), 404
 
 # ════════════════════════════════════════════════════════════════════════
 # MAIN

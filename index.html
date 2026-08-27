@@ -7,7 +7,7 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MyICE ⚕️ — Personal Health Vault</title>
-<!-- v46.21 -->
+<!-- v46.31-emergency-followup -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#E63946">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +15,7 @@
 <meta name="apple-mobile-web-app-title" content="MyICE">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
   --bg-primary: #0d1117;
@@ -437,7 +438,7 @@ body.ob-open{overflow:hidden}
         <div style="display:flex;flex-direction:column;gap:18px;margin-bottom:28px">
           <div style="display:flex;align-items:flex-start;gap:16px;font-size:22px;color:var(--text-secondary);line-height:1.5">
             <span style="font-size:28px;flex-shrink:0">🆘</span>
-            <span><strong style="color:var(--text-primary)">Emergency ID — no login needed.</strong> First responders can see the fields you mark for emergency (e.g. blood type, allergies, contacts). On-chain emergency backup is public by design.</span>
+            <span><strong style="color:var(--text-primary)">Emergency ID — no login needed.</strong> First responders can see the fields you mark for emergency (e.g. blood type, allergies, contacts). On-chain emergency backup is encrypted; responders use your QR/NFC code.</span>
           </div>
           <div style="display:flex;align-items:flex-start;gap:16px;font-size:22px;color:var(--text-secondary);line-height:1.5">
             <span style="font-size:28px;flex-shrink:0">📱</span>
@@ -709,6 +710,32 @@ body.ob-open{overflow:hidden}
   </div>
 </div>
 
+
+<!-- ═══════════════════ HEALTH / BLOCKCHAIN CONSENT ═══════════════════ -->
+<div id="consent-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:3000;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px;width:100%;max-height:92vh;overflow-y:auto">
+    <div style="font-size:26px;font-weight:800;margin-bottom:14px;color:var(--warning)">⚠️ Before you save health data</div>
+    <div style="font-size:18px;line-height:1.7;color:var(--text-secondary);margin-bottom:18px">
+      <strong style="color:var(--text-primary)">MyICE is a personal tool for storing your own health information.</strong>
+      You alone decide what to enter and what to share. You are responsible for ensuring your use of MyICE complies with the laws of your own country, state, or region — health and privacy laws vary by location.
+      Your data is stored on a public blockchain, which is permanent and may not be fully deletable.
+      By continuing, you confirm you understand this and accept responsibility for your choice to store and share your own information.
+      MyICE is not a medical provider and does not give medical or legal advice.
+    </div>
+    <div style="font-size:16px;line-height:1.6;color:var(--text-muted);margin-bottom:18px;padding:12px;border-radius:10px;border:1px solid rgba(0,180,216,0.35);background:rgba(0,180,216,0.08)">
+      <strong style="color:var(--accent)">Emergency backup change:</strong> Emergency fields synced on-chain are now <em>encrypted</em>. First responders decrypt using your physical QR/NFC code (the key is in the link fragment, never sent to our servers). Regenerating the code invalidates old cards.
+    </div>
+    <label style="display:flex;gap:12px;align-items:flex-start;margin-bottom:18px;font-size:17px;line-height:1.5;cursor:pointer">
+      <input type="checkbox" id="consent-check" style="width:22px;height:22px;margin-top:2px;flex-shrink:0" onchange="document.getElementById('consent-accept-btn').disabled=!this.checked">
+      <span>I understand and accept responsibility for storing and sharing my own health information.</span>
+    </label>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="declineHealthConsent()">Cancel</button>
+      <button class="btn btn-primary" id="consent-accept-btn" disabled onclick="acceptHealthConsent()">I Accept — Continue</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════ EMERGENCY OVERLAY ═══════════════════ -->
 <div id="emergency-overlay">
   <div class="em-header">
@@ -719,7 +746,7 @@ body.ob-open{overflow:hidden}
     <button class="em-close-btn" onclick="hideEmergency()">✕ Close</button>
   </div>
   <div style="background:rgba(0,0,0,0.35);padding:8px 16px;font-size:13px;line-height:1.4;color:rgba(255,255,255,0.85);border-bottom:1px solid rgba(255,255,255,0.12)">
-    This screen is meant to open without a login. If you backup to the blockchain, emergency fields are <strong style="color:#fff">public</strong> so responders can open them — only include what you want visible in an emergency.
+    This screen is meant to open without a login. Emergency backup on-chain is <strong style="color:#fff">encrypted</strong>. Responders decrypt with your QR/NFC code (key in the link). Keep the physical code safe — without it, emergency data cannot be read.
   </div>
   <div class="em-body" id="em-body">
     <!-- Rendered by JS -->
@@ -919,9 +946,7 @@ body.ob-open{overflow:hidden}
     <div class="card-title" style="font-size:24px">🚨 For First Responders — The Emergency Card</div>
     <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
       This is the most important feature in MyICE. If you are ever in an accident, unconscious, or unable to speak, a paramedic or emergency room doctor can pull up your emergency information <strong style="color:var(--text-primary)">instantly — no login, no password, no app download needed</strong>.<br><br>
-      Your emergency page is always available at:<br>
-      <span style="font-family:monospace;font-size:17px;color:var(--accent);word-break:break-all">keiko-dev-lcai.github.io/myice</span><br><br>
-      A first responder simply opens that link on any phone or computer and taps <strong style="color:var(--emergency)">Emergency View</strong> at the top of the screen. They will immediately see your:<br>
+      After you sync, generate your <strong style="color:var(--text-primary)">Emergency QR code</strong> in Settings → Cloud Sync. First responders scan it (or open the link). The decrypt key stays in the link after <code>#</code> — never sent to our servers. They will see your:<br>
     </p>
     <ul style="font-size:20px;line-height:2;color:var(--text-secondary);padding-left:24px;margin:0">
       <li>Blood type and critical medical alerts</li>
@@ -1082,7 +1107,7 @@ body.ob-open{overflow:hidden}
     <div class="card-title" style="font-size:24px">🔐 Your Privacy & How Data Is Stored</div>
     <p style="font-size:20px;line-height:1.8;color:var(--text-secondary)">
       <strong style="color:var(--text-primary)">Free users:</strong> Your vault is stored on your device (browser storage). If you do not use Premium AI or cloud backup, health records stay on that device. Anyone you share your PIN or account with can see them. Clearing the browser can erase local data — export a backup first.<br><br>
-      <strong style="color:var(--accent)">Premium users:</strong> You can back up to the Lightchain blockchain. <strong>Emergency data on the blockchain is public by design</strong> so first responders can open it without a password — only put what you want visible in an emergency. Other private vault data is encrypted with your password before upload. <strong>Premium AI features</strong> send the questions and health details needed for that feature to our app server and the Lightchain AI network so you can get an answer — that is not “device only.” We do not sell your data or show ads.
+      <strong style="color:var(--accent)">Premium users:</strong> You can back up to the Lightchain blockchain. <strong>Emergency data is encrypted on-chain</strong>; first responders decrypt with your QR/NFC code (no login/password). Other private vault data is encrypted with your password before upload. <strong>Premium AI features</strong> send the questions and health details needed for that feature to our app server and the Lightchain AI network so you can get an answer — that is not “device only.” We do not sell your data or show ads.
     </p>
   </div>
 
@@ -2194,7 +2219,7 @@ body.ob-open{overflow:hidden}
       <button class="btn btn-secondary" onclick="exportData()">⬇️ Export All Data (JSON)</button>
       <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Vault data is stored on this device by default. Premium AI and blockchain backup send limited data off-device when you use those features — see Terms → Your Data &amp; Privacy. Emergency on-chain data is public by design.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Vault data is stored on this device by default. Premium AI and blockchain backup send limited data off-device when you use those features — see Terms → Your Data &amp; Privacy. Emergency on-chain data is encrypted; the decrypt key lives in your QR/NFC code.</div>
   </div>
   <div class="card">
     <div class="card-title">ℹ️ About MyICE</div>
@@ -2469,7 +2494,7 @@ body.ob-open{overflow:hidden}
       <p><strong>When data leaves your device:</strong></p>
       <ul style="margin:8px 0 12px 18px;line-height:1.55">
         <li><strong>Premium AI</strong> — questions and related health details (for example meds, conditions, lab text) are sent to our app server and the Lightchain AI network to generate a response. Do not use AI for anything you are unwilling to transmit.</li>
-        <li><strong>Blockchain backup (Premium)</strong> — <strong>emergency data on-chain is public</strong> so first responders can open it without a login. Only include what you want visible in an emergency. Other private backup data is encrypted with your password before upload.</li>
+        <li><strong>Blockchain backup (Premium)</strong> — emergency data is encrypted on-chain; first responders decrypt with your physical QR/NFC code (key never uploaded). Other private vault data is encrypted with your password before upload. Blockchain storage is permanent — regenerating your emergency code invalidates old cards but does not erase prior ciphertext from history.</li>
         <li><strong>Account / sync</strong> — if you use login and cloud sync, backup data moves as described in the app for those features.</li>
       </ul>
       <p>We do not sell your personal health information or show third-party ads. You are responsible for your device, PINs, and password. We cannot recover lost local data or reset PINs for you.</p>
@@ -2497,6 +2522,16 @@ body.ob-open{overflow:hidden}
       <p>AI-generated responses are produced by large language models and <strong>may contain errors, omissions, or outdated information</strong>. Drug interaction databases, lab reference ranges, and medical guidelines change over time. The AI may not reflect the most current medical standards.</p>
       <br>
       <p>AI analysis is based solely on the text you provide. It has no access to your full medical history, cannot examine you, and cannot account for individual factors that a physician would consider. Any output should be treated as a starting point for conversation with your doctor — not a conclusion.</p>
+    </div>
+  </div>
+
+
+  <div class="card" style="border-left:3px solid var(--warning)">
+    <div class="card-title" style="color:var(--warning)">Blockchain permanence &amp; your responsibility</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8">
+      <p><strong>MyICE is a personal tool for storing your own health information.</strong> You alone decide what to enter and what to share. You are responsible for ensuring your use of MyICE complies with the laws of your own country, state, or region — health and privacy laws vary by location. Your data is stored on a public blockchain, which is permanent and may not be fully deletable. By continuing, you confirm you understand this and accept responsibility for your choice to store and share your own information. MyICE is not a medical provider and does not give medical or legal advice.</p>
+      <br>
+      <p>Emergency fields synced on-chain are encrypted. The decrypt key is carried in your emergency QR/NFC code (URL fragment), not stored on our servers. Regenerating the code makes old cards useless. Prior ciphertext may still exist in blockchain history.</p>
     </div>
   </div>
 
@@ -3118,7 +3153,25 @@ function gd(key, def=[]) {
   try { const v=localStorage.getItem(pk(key)); return v ? JSON.parse(v) : def; }
   catch(e) { return def; }
 }
-function sd(key, val) { localStorage.setItem(pk(key), JSON.stringify(val)); }
+const _HEALTH_SAVE_KEYS = new Set(['profile','conditions','medications','allergies','vitals','lab_results','documents','appointments','care_team','emergency_contacts','billing','history','vaccinations','vision','devices','symptoms','goals','alerts','dnr']);
+let _pendingHealthSave = null;
+function sd(key, val) {
+  // First health save requires explicit blockchain/privacy consent (GO 2026-08-26)
+  if (_HEALTH_SAVE_KEYS.has(key) && typeof hasHealthConsent === 'function' && !hasHealthConsent()) {
+    _pendingHealthSave = { key, val };
+    ensureHealthConsent().then(ok => {
+      if (ok && _pendingHealthSave) {
+        localStorage.setItem(pk(_pendingHealthSave.key), JSON.stringify(_pendingHealthSave.val));
+        _pendingHealthSave = null;
+        showToast('Saved');
+      } else {
+        _pendingHealthSave = null;
+      }
+    });
+    return;
+  }
+  localStorage.setItem(pk(key), JSON.stringify(val));
+}
 function getSettings() {
   try { const v=localStorage.getItem(`${STORAGE_PREFIX}settings`); return v ? JSON.parse(v) : {ownerPin:'',caregiverPin:'',isPremium:false}; }
   catch(e) { return {ownerPin:'',caregiverPin:'',isPremium:false}; }
@@ -4634,6 +4687,10 @@ function showUpgradeToast() { alert('🔒 This feature requires Premium.\n\nUpgr
 
 // ── INIT ──
 function init() {
+  // Paramedic / emergency-code entry (hash fragment carries decrypt key)
+  if (maybeStartParamedicMode()) return;
+  window.addEventListener('hashchange', () => { maybeStartParamedicMode(); });
+
   // Owner mode URL activation: visiting app with ?owner=1 sets permanent Premium
   const _params = new URLSearchParams(window.location.search);
   if (_params.get('owner') === '1') {
@@ -4812,6 +4869,308 @@ async function decryptData(aesKey, hexCipher) {
   const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, aesKey, ct);
   return JSON.parse(new TextDecoder().decode(pt));
 }
+
+
+// ── Emergency-tier encryption (separate from private password key) ────────────
+// Key lives ONLY in localStorage + QR/NFC URL fragment (#…&k=…). Never uploaded.
+const EMERGENCY_KEY_LS = 'myice_emergency_key_v1';
+const HEALTH_CONSENT_LS = 'myice_health_consent_v1';
+const EM_CACHE_LS = 'myice_em_cache_v1_';
+let _consentResolver = null;
+
+function b64urlFromBytes(bytes) {
+  let s = btoa(String.fromCharCode(...bytes));
+  return s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function bytesFromB64url(str) {
+  str = (str||'').replace(/-/g,'+').replace(/_/g,'/');
+  while (str.length % 4) str += '=';
+  const bin = atob(str);
+  const out = new Uint8Array(bin.length);
+  for (let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function generateEmergencyKey() {
+  const raw = crypto.getRandomValues(new Uint8Array(32));
+  return b64urlFromBytes(raw);
+}
+
+function getStoredEmergencyKey() {
+  return localStorage.getItem(EMERGENCY_KEY_LS) || '';
+}
+
+async function getOrCreateEmergencyKey() {
+  let k = getStoredEmergencyKey();
+  if (k && k.length >= 32) return k;
+  k = await generateEmergencyKey();
+  localStorage.setItem(EMERGENCY_KEY_LS, k);
+  return k;
+}
+
+async function importEmergencyAesKey(keyB64) {
+  const raw = bytesFromB64url(keyB64);
+  if (raw.length !== 32) throw new Error('Invalid emergency key length');
+  return crypto.subtle.importKey('raw', raw, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+
+// Version marker for new emergency ciphertext: ASCII "M1" (0x4D 0x31). Deterministic —
+// no more "first byte != '{'" sniff (1-in-256 false negative on life-safety path).
+const EM_CIPHER_MAGIC = new Uint8Array([0x4D, 0x31]); // "M1"
+
+async function encryptEmergencyPayload(plaintext, keyB64) {
+  const aes = await importEmergencyAesKey(keyB64 || await getOrCreateEmergencyKey());
+  const packedHex = await encryptData(aes, plaintext); // iv(12)||ct as hex
+  const packed = Uint8Array.from(packedHex.match(/.{2}/g).map(h => parseInt(h, 16)));
+  const out = new Uint8Array(EM_CIPHER_MAGIC.length + packed.length);
+  out.set(EM_CIPHER_MAGIC, 0);
+  out.set(packed, EM_CIPHER_MAGIC.length);
+  return bytesToHex(out);
+}
+
+async function decryptEmergencyPayload(hexCipher, keyB64) {
+  const aes = await importEmergencyAesKey(keyB64);
+  let hex = (hexCipher || '').replace(/^0x/i, '');
+  // Strip version marker if present (new records); legacy unmarked cipher packs still decrypt
+  if (hex.length >= 4 && hex.slice(0, 4).toLowerCase() === '4d31') {
+    hex = hex.slice(4);
+  }
+  return decryptData(aes, hex);
+}
+
+function looksLikeEmergencyCipher(hex) {
+  const h = (hex || '').replace(/^0x/i, '');
+  if (!h || h.length < 4) return false;
+  // New records: explicit "M1" magic
+  if (h.slice(0, 4).toLowerCase() === '4d31') return true;
+  // Legacy plaintext JSON starts with '{' (0x7b) — treat as NOT cipher
+  if (parseInt(h.slice(0, 2), 16) === 0x7b) return false;
+  // Unmarked pre-marker ciphertext (from first encrypt GO, brief window): treat as cipher
+  // if it does not look like JSON. Prefer marker going forward.
+  return h.length >= 40;
+}
+
+function emergencyCodeBaseUrl() {
+  // Prefer production domain when known; else current origin (local/dev)
+  const host = (location.hostname||'').toLowerCase();
+  if (host === 'myice.win' || host.endsWith('.myice.win')) return 'https://myice.win/e';
+  return location.origin + location.pathname.replace(/\/?$/, '/') + 'e';
+}
+
+function buildEmergencyCodeUrl(address, keyB64) {
+  // Fragment never sent to servers: /e#a=<addr>&k=<key>
+  return emergencyCodeBaseUrl() + '#a=' + encodeURIComponent(address) + '&k=' + encodeURIComponent(keyB64);
+}
+
+function parseEmergencyFragment(hash) {
+  const h = (hash||location.hash||'').replace(/^#/, '');
+  if (!h) return null;
+  const params = new URLSearchParams(h.includes('=') ? h : '');
+  // also support #a=...&k=... without URLSearchParams quirks
+  let a = params.get('a') || '';
+  let k = params.get('k') || '';
+  if (!a || !k) {
+    const am = h.match(/(?:^|&)a=([^&]+)/);
+    const km = h.match(/(?:^|&)k=([^&]+)/);
+    if (am) a = decodeURIComponent(am[1]);
+    if (km) k = decodeURIComponent(km[1]);
+  }
+  if (!a || !k) return null;
+  return { address: a, key: k };
+}
+
+function hasHealthConsent() {
+  return localStorage.getItem(HEALTH_CONSENT_LS) === '1';
+}
+
+function ensureHealthConsent() {
+  if (hasHealthConsent()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    _consentResolver = resolve;
+    const el = document.getElementById('consent-overlay');
+    if (el) { el.style.display = 'flex'; }
+    const chk = document.getElementById('consent-check');
+    const btn = document.getElementById('consent-accept-btn');
+    if (chk) chk.checked = false;
+    if (btn) btn.disabled = true;
+  });
+}
+
+function acceptHealthConsent() {
+  localStorage.setItem(HEALTH_CONSENT_LS, '1');
+  const el = document.getElementById('consent-overlay');
+  if (el) el.style.display = 'none';
+  if (_consentResolver) { _consentResolver(true); _consentResolver = null; }
+}
+
+function declineHealthConsent() {
+  const el = document.getElementById('consent-overlay');
+  if (el) el.style.display = 'none';
+  if (_consentResolver) { _consentResolver(false); _consentResolver = null; }
+  showToast('Save cancelled — consent is required to store health data.');
+}
+
+async function regenerateEmergencyCode() {
+  if (!confirm('Regenerate emergency code?\\n\\nOld QR/NFC cards will immediately stop working. You must print or save the new code.')) return;
+  const ok = await ensureHealthConsent();
+  if (!ok) return;
+  const fresh = await generateEmergencyKey();
+  localStorage.setItem(EMERGENCY_KEY_LS, fresh);
+  showToast('New emergency key created — syncing encrypted backup…');
+  // Force re-encrypt + upload if logged in
+  if (_sessionLoggedIn) {
+    await syncToChain();
+  }
+  renderAcctSettings();
+  renderEmergencyCodeCard();
+}
+
+function cacheEmergencyPlain(address, obj) {
+  try { localStorage.setItem(EM_CACHE_LS + (address||'').toLowerCase(), JSON.stringify({ ts: Date.now(), data: obj })); } catch(e) {}
+}
+function readEmergencyCache(address) {
+  try {
+    const raw = localStorage.getItem(EM_CACHE_LS + (address||'').toLowerCase());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function renderEmergencyFromObject(em) {
+  // Reuse same layout as local emergency view but from decrypted object
+  let html = '';
+  html += `<div style="margin-bottom:16px;padding:10px;border-radius:8px;background:rgba(0,180,216,0.12);border:1px solid rgba(0,180,216,0.35);font-size:15px;color:var(--text-secondary)">🔓 Decrypted from emergency code · no login required</div>`;
+  html += `<div style="margin-bottom:20px"><a href="tel:911" style="display:flex;align-items:center;justify-content:center;gap:14px;background:var(--emergency);color:#fff;border-radius:14px;padding:18px 20px;margin-bottom:12px;text-decoration:none;font-size:28px;font-weight:900">📞 CALL 911</a></div>`;
+  html += '<div class="em-card"><div class="em-card-title">Patient Information</div><div class="em-info-grid">';
+  if (em.name) html += `<div><div class="em-info-label">Name</div><div class="em-info-value">${esc(em.name)}</div></div>`;
+  if (em.dob) html += `<div><div class="em-info-label">Date of Birth</div><div class="em-info-value">${esc(em.dob)}</div></div>`;
+  if (em.bloodType) html += `<div><div class="em-info-label">Blood Type</div><div class="em-info-value" style="color:var(--emergency)">${esc(em.bloodType)}</div></div>`;
+  if (em.organDonor) html += `<div><div class="em-info-label">Organ Donor</div><div class="em-info-value">${esc(em.organDonor)}</div></div>`;
+  html += '</div></div>';
+  const conditions = em.conditions || [];
+  html += '<div class="em-card"><div class="em-card-title">Medical Conditions</div>';
+  if (conditions.length) conditions.forEach(c => { html += `<div class="em-list-row">${esc(c.name||c)}</div>`; });
+  else html += '<div class="em-empty">None listed</div>';
+  html += '</div>';
+  const medications = em.medications || [];
+  html += '<div class="em-card"><div class="em-card-title">Current Medications</div>';
+  if (medications.length) medications.forEach(m => { html += `<div class="em-list-row"><strong>${esc(m.name||'')}</strong> ${esc(m.dose||'')} — ${esc(m.freq||'')}</div>`; });
+  else html += '<div class="em-empty">None listed</div>';
+  html += '</div>';
+  const allergies = em.allergies || [];
+  html += '<div class="em-card"><div class="em-card-title">⚠️ Allergies</div>';
+  if (allergies.length) allergies.forEach(a => { html += `<div class="em-list-row"><strong>${esc(a.name||'')}</strong> — ${esc(a.severity||'')}</div>`; });
+  else html += '<div class="em-empty">None listed</div>';
+  html += '</div>';
+  const contacts = em.contacts || em.emergency_contacts || [];
+  html += '<div class="em-card"><div class="em-card-title">Emergency Contacts</div>';
+  if (contacts.length) contacts.forEach(c => { html += `<div class="em-contact"><div class="em-contact-info"><div class="em-contact-name">${esc(c.name||'')}</div><div class="em-contact-rel">${esc(c.relationship||'')}</div></div>${c.phone?`<a href="tel:${esc(c.phone)}" class="em-contact-phone">${esc(c.phone)}</a>`:''}</div>`; });
+  else html += '<div class="em-empty">No emergency contacts</div>';
+  html += '</div>';
+  if (em.dnr && (em.dnr.status || em.dnr.notes)) {
+    html += `<div class="em-card"><div class="em-card-title">DNR / Advance Directive</div><div class="em-list-row">${esc(em.dnr.status||'')} ${esc(em.dnr.notes||'')}</div></div>`;
+  }
+  const body = document.getElementById('em-body');
+  if (body) body.innerHTML = html;
+  document.getElementById('emergency-overlay').classList.add('visible');
+}
+
+async function runParamedicEmergencyFlow(frag) {
+  const { address, key } = frag;
+  const body = document.getElementById('em-body');
+  document.getElementById('emergency-overlay').classList.add('visible');
+  if (body) body.innerHTML = '<div style="padding:24px;font-size:20px;color:var(--text-secondary)">Loading encrypted emergency record…</div>';
+  // Hide app chrome for paramedic mode
+  const shell = document.querySelector('.app-shell');
+  if (shell) shell.style.display = 'none';
+  const onboarding = document.getElementById('onboarding-overlay');
+  if (onboarding) onboarding.classList.remove('visible');
+
+  let em = null;
+  try {
+    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(address)}`);
+    const data = await resp.json();
+    if (!data.emergencyData || data.emergencyData.length <= 2) throw new Error('No emergency record on chain for this address');
+    if (!looksLikeEmergencyCipher(data.emergencyData)) {
+      // Legacy plaintext — still show, but warn
+      const hex = data.emergencyData.replace(/^0x/i,'');
+      const text = new TextDecoder().decode(Uint8Array.from(hex.match(/.{2}/g).map(h=>parseInt(h,16))));
+      em = JSON.parse(text);
+      showToast('⚠️ Legacy plaintext emergency record (pre-encryption)', 5000);
+    } else {
+      em = await decryptEmergencyPayload(data.emergencyData, key);
+    }
+    cacheEmergencyPlain(address, em);
+    renderEmergencyFromObject(em);
+  } catch (e) {
+    console.warn('[paramedic]', e);
+    const cached = readEmergencyCache(address);
+    if (cached && cached.data) {
+      try {
+        // If fetch failed but we have cache, still need key to have been used previously —
+        // cache is plaintext on this device only after a successful decrypt.
+        renderEmergencyFromObject(cached.data);
+        showToast('Showing last cached emergency data (offline)', 4000);
+        return;
+      } catch(e2) {}
+    }
+    if (body) body.innerHTML = `<div style="padding:24px;font-size:20px;color:var(--emergency)"><strong>Could not decrypt emergency data.</strong><br><br>${esc(e.message||String(e))}<br><br>Check that the QR/NFC code is complete (address + key) and has not been regenerated.</div>`;
+  }
+}
+
+function maybeStartParamedicMode() {
+  const frag = parseEmergencyFragment(location.hash);
+  // Also treat path ending with /e as emergency entry even before hash parse failure messaging
+  const pathIsE = /\/e\/?$/i.test(location.pathname);
+  if (frag) {
+    runParamedicEmergencyFlow(frag);
+    return true;
+  }
+  if (pathIsE && !frag) {
+    document.getElementById('emergency-overlay').classList.add('visible');
+    const body = document.getElementById('em-body');
+    if (body) body.innerHTML = '<div style="padding:24px;font-size:20px;color:var(--emergency)">Emergency code incomplete — the decrypt key is missing from the link. Ask for a full QR/NFC code.</div>';
+    const shell = document.querySelector('.app-shell');
+    if (shell) shell.style.display = 'none';
+    return true;
+  }
+  return false;
+}
+
+function renderEmergencyCodeCard() {
+  const mount = document.getElementById('emergency-code-card');
+  if (!mount) return;
+  const acct = getAccount();
+  const key = getStoredEmergencyKey();
+  if (!acct || !acct.address) {
+    mount.innerHTML = '<p style="font-size:16px;color:var(--text-muted)">Create/login to an account, then sync to generate an emergency QR code.</p>';
+    return;
+  }
+  if (!key) {
+    mount.innerHTML = `<p style="font-size:16px;color:var(--text-secondary);margin-bottom:10px">No emergency key yet. Sync to chain (or tap Generate) to create one.</p>
+      <button class="btn btn-primary" onclick="(async()=>{await getOrCreateEmergencyKey();renderEmergencyCodeCard();})()">Generate Emergency Key</button>`;
+    return;
+  }
+  const url = buildEmergencyCodeUrl(acct.address, key);
+  mount.innerHTML = `
+    <p style="font-size:16px;color:var(--text-secondary);line-height:1.55;margin-bottom:12px">
+      Print or save this QR / write the link on a card. First responders scan it — <strong>no login</strong>.
+      The decrypt key is in the link after <code>#</code> and is never sent to our servers.
+    </p>
+    <div id="emergency-qr-box" style="background:#fff;padding:12px;border-radius:12px;display:inline-block;margin-bottom:12px"></div>
+    <div style="font-family:monospace;font-size:12px;word-break:break-all;color:var(--accent);margin-bottom:12px">${esc(url)}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="navigator.clipboard&&navigator.clipboard.writeText('${url.replace(/'/g,"\\'")}').then(()=>showToast('Emergency link copied'))">📋 Copy Link</button>
+      <button class="btn btn-danger" onclick="regenerateEmergencyCode()">🔄 Regenerate Code</button>
+    </div>`;
+  const box = document.getElementById('emergency-qr-box');
+  if (box && typeof QRCode !== 'undefined') {
+    box.innerHTML = '';
+    new QRCode(box, { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+  } else if (box) {
+    box.innerHTML = '<div style="color:#000;font-size:12px;max-width:180px">QR library loading… copy the link instead.</div>';
+  }
+}
+
 
 // ── Account Storage ───────────────────────────────────────────────────────────
 
@@ -5188,7 +5547,22 @@ function buildPrivatePayload() {
   keys.forEach(k => { const v = localStorage.getItem(pk(k)); if(v) data[k] = v; });
   data.settings = localStorage.getItem(`${STORAGE_PREFIX}settings`);
   data.syncedAt = Date.now(); // timestamp for cross-device conflict resolution
+  // Wrap emergency key inside password-encrypted private blob so other logged-in
+  // devices (spouse/aide/new phone) can unlock the emergency card without a QR.
+  // Raw key never appears in the store-health request — only inside this ciphertext.
+  const emKey = getStoredEmergencyKey();
+  if (emKey) data.emKey = emKey;
   return JSON.stringify(data);
+}
+
+function restoreEmergencyKeyFromPrivateBlob(chainData) {
+  if (!chainData || !chainData.emKey || typeof chainData.emKey !== 'string') return;
+  if (chainData.emKey.length < 32) return;
+  const existing = getStoredEmergencyKey();
+  // Always adopt cloud key after login/load so regenerate on device A reaches device B
+  if (existing !== chainData.emKey) {
+    localStorage.setItem(EMERGENCY_KEY_LS, chainData.emKey);
+  }
 }
 
 function showSyncOverlay() {
@@ -5260,6 +5634,8 @@ async function pullFromChain() {
       return;
     }
     const chainData = await decryptData(_sessionKey, data.privateData);
+    // Unlock emergency key on this device (shared account / new phone) — still password-gated
+    restoreEmergencyKeyFromPrivateBlob(chainData);
     // Blockchain is always the source of truth — always restore on login
     const keys = ['profile','conditions','medications','allergies','vitals','lab_results',
                    'documents','appointments','care_team','emergency_contacts','billing',
@@ -5269,7 +5645,9 @@ async function pullFromChain() {
     if(acct && chainData.syncedAt) { acct.lastSynced = chainData.syncedAt; _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
     dismissSyncOverlay(false);
     updateSidebarSync('done');
-    // Push local data back up (handles case where local had newer data)
+    // Refresh emergency QR card if settings visible
+    try { renderEmergencyCodeCard(); } catch(e) {}
+    // Push local data back up (handles case where local had newer data; also pushes emKey if we just created one)
     setTimeout(() => { if(_sessionLoggedIn) syncToChain(); }, 3000);
     // Refresh current section
     const activeSection = document.querySelector('.section[style*="block"]');
@@ -5299,18 +5677,20 @@ async function syncToChain() {
     if(errEl) { errEl.style.color = 'var(--accent)'; errEl.textContent = 'Enter your password to sync to the blockchain.'; }
     return;
   }
+  // Consent gate — blocks until accepted
+  const consented = await ensureHealthConsent();
+  if (!consented) { _autoSyncBusy = false; return; }
+
   const btn = document.getElementById('sync-chain-btn');
   if(btn) { btn.textContent = '⏳ Syncing…'; btn.disabled = true; }
 
   try {
-    // Build payloads
+    // Build payloads — emergency encrypted with separate physical-code key
     const emergencyJSON = buildEmergencyPayload();
+    const emKey         = await getOrCreateEmergencyKey();
+    const emergencyHex  = await encryptEmergencyPayload(emergencyJSON, emKey);
     const privateJSON   = buildPrivatePayload();
     const encPrivate    = await encryptData(_sessionKey, privateJSON);
-
-    // Convert to hex
-    const toHex = s => Array.from(new TextEncoder().encode(s)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    const emergencyHex = toHex(emergencyJSON);
 
     const resp = await fetch(`${BACKEND}/api/store-health`, {
       method: 'POST',
@@ -5325,7 +5705,9 @@ async function syncToChain() {
     if(result.success) {
       const acct = getAccount();
       if(acct) { acct.lastSynced = Date.now(); _origSetItem(ACCT_KEY, JSON.stringify(acct)); }
-      if(!_autoSyncBusy) showToast('✅ Synced to Lightchain!');
+      // Cache plaintext emergency for offline paramedic use on this device after successful encrypt+store
+      try { cacheEmergencyPlain(_sessionAddr, JSON.parse(emergencyJSON)); } catch(e) {}
+      if(!_autoSyncBusy) showToast('✅ Synced to Lightchain (emergency encrypted)!');
       _showSyncStatus('✅ Saved');
       setTimeout(() => _showSyncStatus(''), 3000);
       updateSidebarSync('done');
@@ -5349,13 +5731,25 @@ async function loadFromChain() {
     const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(acct.address)}`);
     const data = await resp.json();
     if(!data.hasRecord) return;
-    // Store chain-synced emergency data in localStorage for offline access
     if(data.emergencyData && data.emergencyData.length > 2) {
-      const hex = data.emergencyData.replace('0x','');
-      const bytes = Uint8Array.from(hex.match(/.{2}/g).map(h=>parseInt(h,16)));
-      const text = new TextDecoder().decode(bytes);
-      const em = JSON.parse(text);
-      // Populate localStorage from chain data if profile is empty
+      let em = null;
+      if (looksLikeEmergencyCipher(data.emergencyData)) {
+        const k = getStoredEmergencyKey();
+        if (!k) {
+          console.log('[chain load] encrypted emergency present; no local key (use QR on another device)');
+          return;
+        }
+        try { em = await decryptEmergencyPayload(data.emergencyData, k); }
+        catch (de) { console.log('[chain load] decrypt failed:', de.message); return; }
+      } else {
+        // Legacy plaintext emergency blob
+        const hex = data.emergencyData.replace(/^0x/i,'');
+        const bytes = Uint8Array.from(hex.match(/.{2}/g).map(h=>parseInt(h,16)));
+        const text = new TextDecoder().decode(bytes);
+        em = JSON.parse(text);
+      }
+      if (!em) return;
+      cacheEmergencyPlain(acct.address, em);
       const profile = gd('profile', {});
       if(!profile.name && em.name) {
         Object.assign(profile, { name:em.name, dob:em.dob, bloodType:em.bloodType, organDonor:em.organDonor });
@@ -5471,9 +5865,13 @@ function renderAcctSettings() {
       <button class="sync-btn" id="sync-chain-btn" onclick="syncToChain()">☁️ Sync to Chain</button>
       <div class="sync-status">Last synced: ${lastSync}</div>
       ${acct.lastSynced ? `<div class="chain-badge" style="margin-top:8px">✅ On Lightchain</div>` : ''}
-      <p style="font-size:13px;color:var(--text-secondary);line-height:1.45;margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid rgba(230,57,70,0.35);background:rgba(230,57,70,0.08)">
-        <strong style="color:var(--emergency)">Public emergency data:</strong> Emergency fields written to the chain are public by design (no login for first responders). Private vault data is encrypted with your password. Only sync what you are willing to make emergency-visible.
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.45;margin-top:12px;padding:10px 12px;border-radius:8px;border:1px solid rgba(0,180,216,0.35);background:rgba(0,180,216,0.08)">
+        <strong style="color:var(--accent)">Encrypted emergency backup:</strong> Emergency fields are encrypted before upload. First responders decrypt with your QR/NFC code (key in the URL fragment — never sent to our servers). Private vault data still uses your password. Regenerating the code invalidates old cards.
       </p>
+     </div>
+     <div class="card" style="margin-bottom:16px;padding:14px;border:1px solid var(--border);border-radius:12px">
+       <div class="card-title" style="margin-bottom:8px">🚨 Emergency QR / NFC Code</div>
+       <div id="emergency-code-card"></div>
      </div>`;
 
   el.innerHTML = `
@@ -5493,6 +5891,7 @@ function renderAcctSettings() {
     <div style="font-size:16px;color:var(--text-muted);margin-top:12px;word-break:break-all">
       On-chain address: <code style="font-size:14px">${acct.address}</code>
     </div>`;
+  renderEmergencyCodeCard();
 }
 
 function initAccount() {
