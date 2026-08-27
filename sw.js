@@ -1,5 +1,6 @@
-// MyICE Service Worker — network-first, always fresh
-const VERSION = 'myice-v46.21';
+// MyICE Service Worker — HTML + API network-first; static assets cache-first
+const VERSION = 'myice-v46.32';
+const BACKEND_ORIGIN = 'https://web-production-a6add.up.railway.app';
 
 self.addEventListener('install', e => {
   self.skipWaiting();
@@ -14,23 +15,40 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // For HTML — always go to network first, fall back to cache
-  if (e.request.mode === 'navigate') {
+  const req = e.request;
+  let url;
+  try { url = new URL(req.url); } catch (_) {
+    return;
+  }
+
+  // HTML navigations — network first, cache fallback
+  if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(req).then(res => {
         const clone = res.clone();
-        caches.open(VERSION).then(c => c.put(e.request, clone));
+        caches.open(VERSION).then(c => c.put(req, clone));
         return res;
-      }).catch(() => caches.match(e.request))
+      }).catch(() => caches.match(req))
     );
     return;
   }
-  // For everything else — cache first
+
+  // Backend / medical API — network-first, never prefer stale cache.
+  // On network failure, fall back to last cached copy if any (offline safety).
+  // Do NOT cache.put successful API responses (avoids serving outdated meds/allergies).
+  if (url.origin === BACKEND_ORIGIN) {
+    e.respondWith(
+      fetch(req, { cache: 'no-store' }).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Static assets — cache first
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      return cached || fetch(e.request).then(res => {
+    caches.match(req).then(cached => {
+      return cached || fetch(req).then(res => {
         const clone = res.clone();
-        caches.open(VERSION).then(c => c.put(e.request, clone));
+        caches.open(VERSION).then(c => c.put(req, clone));
         return res;
       });
     })
