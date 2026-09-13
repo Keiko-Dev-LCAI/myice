@@ -18,6 +18,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 :root {
+  --on-accent: #0a0f1e;
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-card: #1c2128;
@@ -61,7 +62,7 @@ a{color:inherit;text-decoration:none}
 /* ── SIDEBAR ── */
 .sidebar{width:var(--sidebar-width);background:var(--bg-secondary);border-right:1px solid var(--border);overflow-y:auto;height:calc(100vh - var(--header-height));position:sticky;top:var(--header-height);flex-shrink:0;transition:transform 0.3s}
 .sidebar-section-label{font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);padding:20px 18px 8px}
-.nav-item{display:flex;align-items:center;gap:12px;padding:13px 18px;color:var(--text-secondary);cursor:pointer;font-size:32px;transition:all 0.12s;border-left:3px solid transparent;user-select:none}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 18px;color:var(--text-secondary);cursor:pointer;font-size:32px;transition:all 0.12s;border-left:0 solid transparent;user-select:none}
 .nav-item:hover{background:var(--bg-hover);color:var(--text-primary)}
 .nav-item.active{background:var(--accent-dim);color:var(--accent);border-left-color:var(--accent);font-weight:600}
 .nav-item.nav-emergency{color:var(--emergency);font-weight:700;font-size:34px}
@@ -81,7 +82,7 @@ a{color:inherit;text-decoration:none}
 
 /* ── CARDS ── */
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;width:100%;box-sizing:border-box}
-.card-title{font-size:26px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
+.card-title{font-size:26px;font-weight:700;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px}
 .card + .card{margin-top:0}
 
 /* ── BUTTONS ── */
@@ -784,7 +785,7 @@ body.ob-open{overflow:hidden}
       <div class="nav-item nav-emergency" data-section="emergency" onclick="showEmergency()">
         <span class="nav-icon">🚨</span> Emergency View
       </div>
-      <div class="nav-item" id="sidebar-sync-btn" onclick="sidebarSync()" style="color:var(--accent);border-left:3px solid transparent">
+      <div class="nav-item" id="sidebar-sync-btn" onclick="sidebarSync()" style="color:var(--accent);border-left:0 solid transparent">
         <span class="nav-icon" id="sidebar-sync-icon">☁️</span>
         <span style="flex:1">
           <span style="display:block">Sync to Cloud</span>
@@ -4202,7 +4203,7 @@ function renderHealthApps() {
       <div style="width:42px;height:42px;border-radius:10px;background:var(--bg-secondary);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${esc(icon)}</div>
       <div class="list-item-content">
         <div class="list-item-title">${esc(a.name)}</div>
-        <div class="list-item-subtitle">${a.notes ? esc(a.notes) + ' · ' : ''}<span style="color:var(--text-muted);font-size:11px">${esc(a.url||'')}</span></div>
+        <div class="list-item-subtitle">${a.notes ? esc(a.notes) + ' · ' : ''}<span style="color:var(--text-muted);font-size:12px">${esc(a.url||'')}</span></div>
       </div>
       <div class="list-item-actions" style="gap:8px">
         <a href="${esc(url)}" target="_blank" class="btn btn-primary" style="text-decoration:none;padding:7px 14px;font-size:13px">Open →</a>
@@ -4293,7 +4294,7 @@ function renderApptList(containerId,items,emptyMsg) {
   let html='';
   items.forEach(a=>{
     html+=`<div class="list-item">
-      <div style="flex-shrink:0;text-align:center;min-width:50px"><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">${a.date?new Date(a.date).toLocaleDateString('en-US',{month:'short'}):'—'}</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${a.date?new Date(a.date).getDate():'—'}</div></div>
+      <div style="flex-shrink:0;text-align:center;min-width:50px"><div style="font-size:12px;color:var(--text-muted);text-transform:uppercase">${a.date?new Date(a.date).toLocaleDateString('en-US',{month:'short'}):'—'}</div><div style="font-size:22px;font-weight:800;color:var(--accent)">${a.date?new Date(a.date).getDate():'—'}</div></div>
       <div class="list-item-content">
         <div class="list-item-title">${esc(a.doctor)}</div>
         <div class="list-item-subtitle">${a.time?esc(a.time)+' · ':''}<span style="color:var(--text-secondary)">${esc(a.specialty||'')}</span>${a.location?' · '+esc(a.location):''}</div>
@@ -4628,7 +4629,7 @@ function renderGoals() {
       <div><div style="font-size:16px;font-weight:700">${esc(g.name)}</div><div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Current: <strong>${esc(g.current)}</strong> → Target: <strong>${esc(g.target)}</strong>${g.date?' by '+fmt(g.date):''}</div></div>
       <button class="btn-icon danger owner-only" onclick="deleteItem('health_goals','${g.id}',renderGoals)">🗑️</button></div>
       ${g.notes?`<div style="font-size:13px;color:var(--text-muted);margin-top:6px">${esc(g.notes)}</div>`:''}
-      <div style="margin-top:10px"><div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Progress estimate: ${pct}%</div>
+      <div style="margin-top:10px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Progress estimate: ${pct}%</div>
       <div class="progress-bar"><div class="progress-fill ${pct>=80?'green':pct>=50?'':'orange'}" style="width:${pct}%"></div></div></div>
     </div>`;
   });
@@ -5507,7 +5508,7 @@ function printEmergencyWalletCard() {
   body { font-family: system-ui, sans-serif; background:#fff; color:#000; margin:0; padding:16px; }
   .card { width: 85.6mm; max-width: 100%; border: 2px solid #000; border-radius: 8px; padding: 12px; box-sizing: border-box; }
   h1 { font-size: 14px; margin: 0 0 8px; letter-spacing: 0.04em; }
-  .sub { font-size: 11px; margin: 0 0 10px; }
+  .sub { font-size:12px; margin: 0 0 10px; }
   #pq { display:flex; justify-content:center; margin: 8px 0 10px; }
   .link { font-family: ui-monospace, monospace; font-size: 8px; word-break: break-all; }
   .note { font-size: 9px; margin-top: 10px; }
