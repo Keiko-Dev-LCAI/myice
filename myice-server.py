@@ -1213,6 +1213,15 @@ def serve_index():
     return send_from_directory(_STATIC_DIR, "index.html")
 
 
+@app.route("/getlcai/<path:asset>")
+def serve_getlcai_asset(asset):
+    safe = os.path.basename(asset)
+    gl_dir = os.path.join(_STATIC_DIR, "getlcai")
+    if os.path.isfile(os.path.join(gl_dir, safe)):
+        return send_from_directory(gl_dir, safe)
+    return jsonify({"error": "not found"}), 404
+
+
 @app.route("/<path:asset>")
 def serve_static_asset(asset):
     # Allow QR/lib-less local testing of icons/manifest/apk from same origin
