@@ -376,6 +376,8 @@ class AIVMClient:
         }
 
     def run_inference(self, prompt: str, timeout_secs: int = 360) -> str:
+        import aivm_client as _aivm_sortition
+        return _aivm_sortition.infer(prompt, timeout=timeout_secs)
         import websocket as _ws
         from web3 import Web3
 
