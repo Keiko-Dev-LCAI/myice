@@ -24,6 +24,16 @@ _CORS_ORIGINS = [o.strip() for o in os.environ.get(
 ).split(",") if o.strip()]
 CORS(app, origins=_CORS_ORIGINS)
 
+# Vacation hard-gate. Restore: unset MAINTENANCE and redeploy.
+_MAINTENANCE = os.environ.get("MAINTENANCE", "").strip().lower() in ("1", "true", "yes", "on")
+_VACATION_DIR = os.path.dirname(os.path.abspath(__file__))
+
+@app.before_request
+def _vacation_gate():
+    if not _MAINTENANCE:
+        return None
+    return send_from_directory(_VACATION_DIR, "maintenance.html")
+
 # ════════════════════════════════════════════════════════════════════════
 # CONVERSATION MEMORY (per-session, in-process)
 # ════════════════════════════════════════════════════════════════════════
