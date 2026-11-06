@@ -635,9 +635,10 @@ class AIVMClient:
             ws_ready.set()
 
         def _on_error(ws_obj, err):
+            # A relay close is not the end of the job. Leave the wait loop
+            # running so a finished answer can still be read from the chain.
             ws_err[0] = err
             ws_ready.set()
-            complete.set()
 
         ws = _ws.WebSocketApp(
             f"{AIVM_RELAY}?token={url_quote(relay_token)}",
