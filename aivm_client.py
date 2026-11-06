@@ -649,9 +649,14 @@ class AIVMClient:
         ws_thread = threading.Thread(target=ws.run_forever, daemon=True)
         ws_thread.start()
         ws_ready.wait(timeout=15)
-        if ws_err[0] and not chunks:
-            raise RuntimeError(f"WebSocket failed: {ws_err[0]}")
-        print("  [AIVM] relay connected", flush=True)
+        if ws_err[0]:
+            print(
+                f"  [AIVM] relay not usable ({ws_err[0]}); "
+                "the answer will be read from the chain",
+                flush=True,
+            )
+        else:
+            print("  [AIVM] relay connected", flush=True)
 
         cipher = _aes_encrypt(session_key, prompt.encode("utf-8"))
         blob_body = self._api_json(
