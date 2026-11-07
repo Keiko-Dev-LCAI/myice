@@ -14,8 +14,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyICE">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="ethers-6.7.0.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" integrity="sha384-DhxhYObIMeMNGyAG7iK11OHzBIKyEIeRL0ad1iFPAOwZB8iirUlTT0O/WJJUk8+o" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <style>
 :root {
   --on-accent: #0a0f1e;
@@ -2579,6 +2580,61 @@ const LC_RPC         = 'https://rpc.mainnet.lightchain.ai';
 const PAYMENT_WALLET = '0x6518fD26a7aD2Fe1bA80De5f279Ee59F55C0A9bA';
 const PREMIUM_USD    = 3.00;
 let _lcaiPrice = null, _lcaiPriceTs = 0;
+let _sessionSeedHex = null;
+
+function stableStringify(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return '[' + value.map(stableStringify).join(',') + ']';
+  const keys = Object.keys(value).sort();
+  return '{' + keys.map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
+}
+async function sha256HexText(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function myiceAiPost(path, payload) {
+  const settings = getSettings();
+  const paymentTx = settings.premiumTxHash || '';
+  const eth = window.ethereum;
+  if (!eth || !eth.request) {
+    throw new Error('Open MyICE in Trust Wallet and sign with the wallet that paid for Premium.');
+  }
+  const accounts = await eth.request({ method: 'eth_requestAccounts' });
+  const address = String((accounts && accounts[0]) || '').toLowerCase();
+  if (!/^0x[a-f0-9]{40}$/.test(address)) throw new Error('A wallet signature is required.');
+  const ts = Math.floor(Date.now() / 1000);
+  const extra = await sha256HexText(stableStringify(payload));
+  const auth_message = 'MyICE|ai|' + address + '|' + ts + '|' + extra;
+  const signature = await eth.request({ method: 'personal_sign', params: [auth_message, address] });
+  return fetch(BACKEND + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({}, payload, {
+      address: address,
+      auth_message: auth_message,
+      signature: signature,
+      payment_tx: paymentTx
+    }))
+  });
+}
+async function myiceRecordHeaders(payloadText) {
+  if (!_sessionSeedHex || !_sessionAddr) {
+    throw new Error('Log in with your password to sync. Fingerprint login keeps this device unlocked, and cloud backup needs the password.');
+  }
+  if (!window.ethers || !window.ethers.Wallet) throw new Error('Signing library failed to load. Refresh and try again.');
+  const ts = Math.floor(Date.now() / 1000);
+  const addr = _sessionAddr.toLowerCase();
+  const extra = await sha256HexText(payloadText);
+  const auth_message = 'MyICE|record|' + addr + '|' + ts + '|' + extra;
+  const signer = new ethers.Wallet('0x' + _sessionSeedHex);
+  const signature = await signer.signMessage(auth_message);
+  return {
+    'Content-Type': 'application/json',
+    'X-MyICE-Message': auth_message,
+    'X-MyICE-Signature': signature,
+    'X-MyICE-Proof': _sessionSeedHex
+  };
+}
 
 let activeProfileId = 'default';
 let sessionAuth = null; // null | 'owner' | 'caregiver'
@@ -2594,7 +2650,7 @@ async function saveSessionToStorage() {
     const keyBytes = await crypto.subtle.exportKey('raw', _sessionKey);
     const keyHex = Array.from(new Uint8Array(keyBytes)).map(b=>b.toString(16).padStart(2,'0')).join('');
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
-      keyHex, address: _sessionAddr,
+      keyHex, address: _sessionAddr, seedHex: _sessionSeedHex || '',
       identityId: _currentIdentityId,
       identityName: _currentIdentityName,
       savedAt: Date.now()
@@ -2612,6 +2668,7 @@ async function restoreSessionFromStorage() {
     const aesKey = await crypto.subtle.importKey('raw', keyBytes, {name:'AES-GCM',length:256}, true, ['encrypt','decrypt']);
     _sessionKey          = aesKey;
     _sessionAddr         = data.address;
+    _sessionSeedHex      = data.seedHex || null;
     _sessionLoggedIn     = true;
     _currentIdentityId   = data.identityId   || '';
     _currentIdentityName = data.identityName || '';
@@ -3154,11 +3211,7 @@ async function sendAiChat() {
   };
 
   try {
-    const r = await fetch(`${BACKEND}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, context, session_id: _aiSessionId })
-    });
+    const r = await myiceAiPost('/api/chat', { message: text, context, session_id: _aiSessionId });
     const d = await r.json();
     removeAiChatThinking();
     if(!r.ok) throw new Error(d.error || 'Server error');
@@ -3949,7 +4002,7 @@ async function checkInteractions() {
   const conds=gd('conditions',[]);
   showInfo('interaction-result','<div style="display:flex;align-items:center;gap:8px">⏳ Checking interactions — this may take up to 2 minutes...</div>');
   try {
-    const r=await fetch(`${BACKEND}/api/check-interactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({medications:meds,conditions:conds})});
+    const r = await myiceAiPost('/api/check-interactions', { medications: meds, conditions: conds });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('interaction-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Drug Interaction Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
@@ -3966,7 +4019,7 @@ async function explainMed(id) {
   modal.innerHTML=`<div style="background:var(--bg-card);border-radius:12px;padding:24px;max-width:700px;width:100%;max-height:88vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><strong style="font-size:22px">💊 ${esc(m.name)} ${esc(m.dose||'')}</strong><button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button></div><div id="explain-content">⏳ Getting AI explanation — up to 2 minutes...</div></div>`;
   document.body.appendChild(modal);
   try {
-    const r=await fetch(`${BACKEND}/api/explain-medication`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:m.name,dosage:m.dose||'',route:m.route||'',conditions:conds})});
+    const r = await myiceAiPost('/api/explain-medication', { name: m.name, dosage: m.dose || '', route: m.route || '', conditions: conds });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     modal.querySelector('#explain-content').innerHTML= AI_WARNING_BANNER + `<div style="font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.explanation)}</div>`;
@@ -4044,7 +4097,7 @@ async function analyzeLab() {
   const conds=gd('conditions',[]); const meds=gd('medications',[]);
   showInfo('lab-ai-result','⏳ Analyzing your lab results — this may take up to 2 minutes...');
   try {
-    const r=await fetch(`${BACKEND}/api/analyze-labs`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:notes,testName,conditions:conds,medications:meds})});
+    const r = await myiceAiPost('/api/analyze-labs', { text: notes, testName, conditions: conds, medications: meds });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('lab-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Lab Results Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.analysis)}</div></div>`);
@@ -4177,7 +4230,7 @@ async function analyzeDocument() {
   if(!docNotes) { alert('Enter document text or paste the document contents in the Notes field first.'); return; }
   showInfo('doc-ai-result','⏳ Analyzing document — this may take up to 2 minutes...');
   try {
-    const r=await fetch(`${BACKEND}/api/analyze-document`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:docNotes,name:docName})});
+    const r = await myiceAiPost('/api/analyze-document', { text: docNotes, name: docName });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('doc-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Document Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
@@ -4255,10 +4308,7 @@ async function processImportFile(file) {
       text = (await file.text()).slice(0, 8000);
     }
     if(!text.trim()) { showInfo('import-ai-result','<div style="color:var(--warning)">⚠️ Could not read text from this file. Try copy-pasting the content into the Documents section instead.</div>'); return; }
-    const r = await fetch(`${BACKEND}/api/analyze-document`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({text, name: file.name})
-    });
+    const r = await myiceAiPost('/api/analyze-document', { text: text, name: file.name });
     const d = await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('import-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)">
@@ -4364,7 +4414,7 @@ async function suggestQuestions() {
   const labs=gd('lab_results',[]).slice(-5);
   showInfo('q-ai-result','⏳ Generating personalized questions — up to 2 minutes...');
   try {
-    const r=await fetch(`${BACKEND}/api/suggest-questions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({conditions:conds,medications:meds,appointment:appt,recentLabs:labs})});
+    const r = await myiceAiPost('/api/suggest-questions', { conditions: conds, medications: meds, appointment: appt, recentLabs: labs });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('q-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Suggested Questions for Your Doctor</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.questions)}</div></div>`);
@@ -4606,7 +4656,7 @@ async function analyzeSymptoms() {
   const conds=gd('conditions',[]); const meds=gd('medications',[]);
   showInfo('sj-ai-result','⏳ Analyzing your symptom patterns — up to 2 minutes...');
   try {
-    const r=await fetch(`${BACKEND}/api/analyze-symptoms`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symptoms:items,conditions:conds,medications:meds})});
+    const r = await myiceAiPost('/api/analyze-symptoms', { symptoms: items, conditions: conds, medications: meds });
     const d=await r.json();
     if(!r.ok) throw new Error(d.error||'Server error');
     showInfo('sj-ai-result', AI_WARNING_BANNER + `<div class="card" style="margin:0;background:var(--accent-dim);border-color:rgba(0,180,216,0.3)"><strong style="color:var(--accent)">🤖 Symptom Pattern Background Info</strong><div style="margin-top:10px;font-size:20px;color:var(--text-secondary);white-space:pre-wrap;line-height:1.8">${esc(d.result)}</div></div>`);
@@ -4913,7 +4963,7 @@ async function eraseBlockchainRecord() {
       showToast('Erasing on-chain record…', 6000);
       const resp = await fetch(`${BACKEND}/api/delete-health`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await myiceRecordHeaders('delete'),
         body: JSON.stringify({ address: addr })
       });
       const result = await resp.json();
@@ -4941,7 +4991,7 @@ async function eraseBlockchainRecord() {
   // Wipe local vault (same as clearAllData local path)
   Object.keys(localStorage).filter(k => k.startsWith(`${STORAGE_PREFIX}${activeProfileId}_`)).forEach(k => localStorage.removeItem(k));
   try { localStorage.removeItem(ACCT_KEY); } catch (e) {}
-  _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null;
+  _sessionKey = null; _sessionAddr = null; _sessionSeedHex = null; _sessionLoggedIn = false; sessionAuth = null;
 
   showToast(txHash ? ('✅ Blockchain record erased · key destroyed · local wipe done') : ('✅ Emergency key destroyed · local wipe done'), 5000);
   setTimeout(() => location.reload(), 800);
@@ -5524,7 +5574,7 @@ function printEmergencyWalletCard() {
     <div class="link" id="plink"></div>
     <p class="note">Keep this on you (wallet, phone case). Regenerating your code voids this card.</p>
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"><\/script>
   <script>
     const url = ${JSON.stringify(url)};
     document.getElementById('plink').textContent = url;
@@ -5548,7 +5598,7 @@ function getAccount() {
 }
 function saveAccount(a) { localStorage.setItem(ACCT_KEY, JSON.stringify(a)); }
 function clearSession() {
-  _sessionKey = null; _sessionAddr = null; _sessionLoggedIn = false; sessionAuth = null;
+  _sessionKey = null; _sessionAddr = null; _sessionSeedHex = null; _sessionLoggedIn = false; sessionAuth = null;
   _currentIdentityId = ''; _currentIdentityName = '';
   clearSessionStorage();
   updateAcctHeaderBtn(); updateSidebarSync('');
@@ -5595,6 +5645,7 @@ async function doCreateAccount() {
     errEl.textContent = 'Creating account…';
     const aesKey = await deriveAESKey(password, username);
     const address = await deriveOnChainAddress(password, username);
+    _sessionSeedHex = bytesToHex(await deriveAddressBytes(password, username));
 
     // Hash the password for local verification (never store the password itself)
     const passHash = bytesToHex(new Uint8Array(
@@ -5655,6 +5706,7 @@ async function doLogin() {
     try {
       const aesKey  = await deriveAESKey(password, username);
       const address = await deriveOnChainAddress(password, username);
+      _sessionSeedHex = bytesToHex(await deriveAddressBytes(password, username));
       const pH = bytesToHex(new Uint8Array(
         await crypto.subtle.digest('SHA-256', new TextEncoder().encode('myice_verify_' + password + username))
       ));
@@ -5694,6 +5746,7 @@ async function doLogin() {
 
   try {
     _sessionKey = await deriveAESKey(password, acct.username);
+    _sessionSeedHex = bytesToHex(await deriveAddressBytes(password, acct.username));
     _sessionAddr = acct.address;
     _sessionLoggedIn = true;
     // Power follows identity PIN — least privilege until identified
@@ -5985,7 +6038,9 @@ async function pullFromChain() {
 
   try {
     // include_private=true is REQUIRED — backend only returns encrypted data when asked
-    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}&include_private=true`);
+    const resp = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}&include_private=true`, {
+      headers: await myiceRecordHeaders('private')
+    });
     const data = await resp.json();
     clearTimeout(timeoutId);
     clearTimeout(slowWarningId);
@@ -6063,7 +6118,9 @@ async function syncToChain() {
   try {
     // Before upload: union Access Log with latest cloud so we don't clobber other devices
     try {
-      const pre = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}&include_private=true`);
+      const pre = await fetch(`${BACKEND}/api/get-health?address=${encodeURIComponent(_sessionAddr)}&include_private=true`, {
+        headers: await myiceRecordHeaders('private')
+      });
       const preData = await pre.json();
       if (preData && preData.privateData) {
         const cloudPriv = await decryptData(_sessionKey, preData.privateData);
@@ -6085,7 +6142,7 @@ async function syncToChain() {
 
     const resp = await fetch(`${BACKEND}/api/store-health`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await myiceRecordHeaders(emergencyHex + '|' + encPrivate),
       body: JSON.stringify({
         address:      _sessionAddr,
         emergencyData: emergencyHex,

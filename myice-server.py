@@ -6,20 +6,25 @@ Powered by Lightchain AIVM decentralized inference.
 Set LIGHTCHAIN_PRIVATE_KEY env var (dApp wallet) on Railway.
 """
 
+import hashlib
+import ipaddress
 import os
 import json
 import threading
 import time
+import urllib.request
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Scoped CORS — override with CORS_ORIGINS env (comma-separated)
+# Scoped CORS — override with CORS_ORIGINS env (comma-separated). Never "*".
 _CORS_ORIGINS = [o.strip() for o in os.environ.get(
     "CORS_ORIGINS",
     "https://myice.win,http://localhost:5000,http://127.0.0.1:5000"
 ).split(",") if o.strip()]
-CORS(app, origins=_CORS_ORIGINS)
+CORS(app, origins=_CORS_ORIGINS, allow_headers=[
+    "Content-Type", "X-MyICE-Message", "X-MyICE-Signature", "X-MyICE-Proof",
+])
 
 # Vacation hard-gate. Restore: unset MAINTENANCE and redeploy.
 _MAINTENANCE = os.environ.get("MAINTENANCE", "").strip().lower() in ("1", "true", "yes", "on")
@@ -72,13 +77,25 @@ _IP_RATE_PER_MIN = int(os.environ.get("IP_RATE_PER_MIN", "30"))
 _DAILY_LCAI_CAP = float(os.environ.get("DAILY_LCAI_CAP", "50"))
 _LCAI_PER_AI_JOB = float(os.environ.get("LCAI_PER_JOB", "0.02"))
 _MAX_CONCURRENT_AI = int(os.environ.get("MAX_CONCURRENT_JOBS", "8"))
-_PAYMENT_WALLET = os.environ.get("PAYMENT_WALLET", "").strip().lower()
-_PREMIUM_ENFORCE = os.environ.get("PREMIUM_ENFORCE", "false").lower() in ("1", "true", "yes")
+# Public receive address already shown on myice.win. PAYMENT_WALLET overrides it.
+_PAYMENT_WALLET_PUBLIC = "0x6518fd26a7ad2fe1ba80de5f279ee59f55c0a9ba"
 _PREMIUM_WHITELIST = {
     w.strip().lower()
     for w in os.environ.get("PREMIUM_WHITELIST", "").split(",")
     if w.strip()
 }
+MAX_HTTP_BODY = int(os.environ.get("MAX_HTTP_BODY", str(1024 * 1024)))
+MAX_PROMPT_CHARS = int(os.environ.get("MAX_PROMPT_CHARS", "12000"))
+MYICE_AUTH_MAX_AGE = 600
+PREMIUM_USD = 3.0
+PREMIUM_SECONDS = 31 * 24 * 3600
+LCAI_DEX_TOKEN = "0x9cA8530CA349c966Fe9ef903Df17a75B8A778927"
+_AI_PREFIXES = (
+    "/api/chat", "/api/analyze-labs", "/api/check-interactions",
+    "/api/explain-medication", "/api/analyze-document",
+    "/api/analyze-symptoms", "/api/suggest-questions",
+)
+_AI_AUTH_FIELDS = {"address", "wallet", "auth_message", "signature", "payment_tx"}
 
 _guard_lock = _threading.Lock()
 _ip_hits = _defaultdict(list)          # ip -> [ts,...]
@@ -87,13 +104,31 @@ _addr_store_hits = _defaultdict(list)
 _spend_day = ""
 _spend_jobs = 0
 _active_ai = 0
-_used_nonces = {}  # key -> expiry ts
+_used_sigs = {}
+_price_cache = {"usd": 0.0, "ts": 0.0}
+_sub_cache = {}
+
+def _payment_wallet():
+    configured = os.environ.get("PAYMENT_WALLET", "").strip().lower()
+    return configured or _PAYMENT_WALLET_PUBLIC
+
+def _valid_ip(value):
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except Exception:
+        return False
 
 def _client_ip():
-    fwd = request.headers.get("X-Forwarded-For", "")
-    if fwd:
-        return fwd.split(",")[0].strip()
-    return request.remote_addr or "0.0.0.0"
+    """Cloudflare client, otherwise the last proxy hop. The first hop is caller-chosen."""
+    cf = (request.headers.get("CF-Connecting-IP") or "").strip()
+    if _valid_ip(cf):
+        return cf
+    hops = [p.strip() for p in (request.headers.get("X-Forwarded-For") or "").split(",") if p.strip()]
+    for hop in reversed(hops):
+        if _valid_ip(hop):
+            return hop
+    return request.remote_addr or ""
 
 def _prune(lst, window):
     now = time.time()
@@ -156,46 +191,263 @@ def _gate_store(address: str):
         return False, 429, {"error": "Store rate limit: 1 per address per 5 minutes"}
     return True, 200, {}
 
-def _premium_ok(address: str) -> bool:
-    """Server-side premium check (whitelist + optional on-chain payment scan stub)."""
-    if not address:
-        return False
-    a = address.lower()
-    if a in _PREMIUM_WHITELIST:
+_WALLET_TX = __import__("re").compile(r"0x[0-9a-fA-F]{64}")
+
+def _rpc(method, params):
+    payload = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+    req = urllib.request.Request(
+        "https://rpc.mainnet.lightchain.ai",
+        data=payload,
+        headers={"Content-Type": "application/json", "User-Agent": "MyICE/1.0"},
+    )
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        body = json.loads(resp.read().decode())
+    if not isinstance(body, dict) or body.get("error"):
+        raise RuntimeError("rpc")
+    return body.get("result")
+
+def _lcai_usd():
+    now = time.time()
+    cached = float(_price_cache.get("usd") or 0)
+    if cached > 0 and now - float(_price_cache.get("ts") or 0) < 300:
+        return cached
+    price = 0.0
+    try:
+        req = urllib.request.Request(
+            "https://api.coingecko.com/api/v3/simple/price?ids=lightchain-ai&vs_currencies=usd",
+            headers={"Accept": "application/json", "User-Agent": "MyICE/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            body = json.loads(resp.read().decode())
+        price = float((body.get("lightchain-ai") or {}).get("usd") or 0)
+    except Exception:
+        price = 0.0
+    if price <= 0:
+        try:
+            req = urllib.request.Request(
+                "https://api.dexscreener.com/latest/dex/tokens/" + LCAI_DEX_TOKEN,
+                headers={"Accept": "application/json", "User-Agent": "MyICE/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                body = json.loads(resp.read().decode())
+            for pair in body.get("pairs") or []:
+                base = (pair or {}).get("baseToken") or {}
+                if str(base.get("symbol") or "").upper() != "LCAI":
+                    continue
+                got = float(pair.get("priceUsd") or 0)
+                if got > 0:
+                    price = got
+                    break
+        except Exception:
+            price = 0.0
+    if price > 0:
+        _price_cache["usd"] = price
+        _price_cache["ts"] = now
+    return price
+
+def _subscription_ok(address, tx_hash):
+    """Native LCAI transfer from the signer to the MyICE receive wallet. Fail closed."""
+    address = (address or "").lower()
+    tx_hash = (tx_hash or "").strip()
+    if not _WALLET_TX.fullmatch(tx_hash):
+        return False, "An active Premium payment is required.", 402
+    key = (address, tx_hash.lower())
+    now = time.time()
+    hit = _sub_cache.get(key)
+    if hit and hit[0] and now - hit[1] < 600:
+        return True, "", 200
+    try:
+        tx = _rpc("eth_getTransactionByHash", [tx_hash])
+    except Exception:
+        return False, "Could not verify the payment. Try again.", 503
+    if not isinstance(tx, dict) or not tx.get("blockNumber"):
+        return False, "Payment transaction was not found or is not confirmed.", 402
+    if str(tx.get("from") or "").lower() != address:
+        return False, "That payment is not from this wallet.", 402
+    if str(tx.get("to") or "").lower() != _payment_wallet():
+        return False, "That payment was not sent to MyICE.", 402
+    try:
+        value = int(tx.get("value") or "0x0", 16)
+        receipt = _rpc("eth_getTransactionReceipt", [tx_hash])
+        block = _rpc("eth_getBlockByNumber", [tx.get("blockNumber"), False])
+    except Exception:
+        return False, "Could not verify the payment. Try again.", 503
+    if not isinstance(receipt, dict) or int(str(receipt.get("status") or "0x0"), 16) != 1:
+        return False, "Payment was not successful.", 402
+    if not isinstance(block, dict):
+        return False, "Could not verify the payment. Try again.", 503
+    try:
+        ts = int(str(block.get("timestamp") or "0x0"), 16)
+    except ValueError:
+        return False, "Could not verify the payment. Try again.", 503
+    if ts > now + 300 or now - ts > PREMIUM_SECONDS:
+        return False, "The Premium payment is older than 31 days.", 402
+    price = _lcai_usd()
+    if not price or price <= 0:
+        return False, "Could not verify the Premium price. Try again.", 503
+    required = int((PREMIUM_USD / price) * 10 ** 18)
+    if value < (required * 95) // 100:
+        return False, "The payment amount is below the Premium price.", 402
+    _sub_cache[key] = (True, now)
+    if len(_sub_cache) > 2000:
+        oldest = sorted(_sub_cache.items(), key=lambda item: item[1][1])[:500]
+        for old_key, _old in oldest:
+            _sub_cache.pop(old_key, None)
+    return True, "", 200
+
+def _recover(message, signature):
+    from eth_account import Account
+    from eth_account.messages import encode_defunct
+    return Account.recover_message(encode_defunct(text=message), signature=signature).lower()
+
+def _consume_sig(signature):
+    digest = hashlib.sha256(signature.encode("utf-8")).hexdigest()
+    now = time.time()
+    with _guard_lock:
+        stale = [k for k, ts in _used_sigs.items() if now - ts > MYICE_AUTH_MAX_AGE]
+        for k in stale:
+            _used_sigs.pop(k, None)
+        if digest in _used_sigs:
+            return False
+        _used_sigs[digest] = now
         return True
-    # Client may pass verifiedTxHash; we only accept if it paid PAYMENT_WALLET (best-effort).
-    # Full historical scan is expensive — premium is also re-checked at payment verify time
-    # and can be mirrored via PREMIUM_WHITELIST / future DB.
+
+def _canonical_ai(data):
+    clean = {k: v for k, v in data.items() if k not in _AI_AUTH_FIELDS}
+    return json.dumps(clean, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+def _too_long(value):
+    if isinstance(value, str):
+        return len(value) > MAX_PROMPT_CHARS
+    if isinstance(value, dict):
+        return any(_too_long(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_too_long(v) for v in value)
     return False
 
+def _ai_authorized(data):
+    message = data.get("auth_message") if isinstance(data.get("auth_message"), str) else ""
+    signature = (data.get("signature") or "").strip()
+    address = (data.get("address") or data.get("wallet") or "").strip().lower()
+    if not message or not signature or not address:
+        return False, "A wallet signature is required.", 401, ""
+    parts = message.split("|")
+    if len(parts) != 5 or parts[0] != "MyICE" or parts[1] != "ai" or parts[2] != address:
+        return False, "A wallet signature is required.", 401, ""
+    try:
+        ts = int(parts[3])
+    except ValueError:
+        return False, "A wallet signature is required.", 401, ""
+    if abs(int(time.time()) - ts) > MYICE_AUTH_MAX_AGE:
+        return False, "Signature expired. Sign again.", 401, ""
+    if parts[4] != hashlib.sha256(_canonical_ai(data).encode("utf-8")).hexdigest():
+        return False, "Signature does not match this request.", 401, ""
+    try:
+        got = _recover(message, signature)
+    except Exception:
+        return False, "A wallet signature is required.", 401, ""
+    if got != address:
+        return False, "Signature does not match this wallet.", 401, ""
+    if address in _PREMIUM_WHITELIST:
+        return True, "", 200, address
+    ok, err, code = _subscription_ok(address, data.get("payment_tx") or "")
+    if not ok:
+        return False, err, code, ""
+    return True, "", 200, address
+
+def _header_or_body(header, field):
+    value = (request.headers.get(header) or "").strip()
+    if value:
+        return value
+    data = request.get_json(silent=True) or {}
+    got = data.get(field) or ""
+    return got.strip() if isinstance(got, str) else ""
+
+def _record_authorized(hash_addr, payload_text):
+    """Prove the caller knows the password seed for this hash address. The seed is not stored."""
+    message = _header_or_body("X-MyICE-Message", "auth_message")
+    signature = _header_or_body("X-MyICE-Signature", "signature")
+    proof = _header_or_body("X-MyICE-Proof", "proof")
+    hash_addr = (hash_addr or "").strip().lower()
+    if not message or not signature or not proof:
+        return False, "A wallet signature is required."
+    if not (hash_addr.startswith("0x") and len(hash_addr) == 42):
+        return False, "A wallet signature is required."
+    raw = proof[2:] if proof.startswith("0x") else proof
+    if len(raw) != 64:
+        return False, "A wallet signature is required."
+    try:
+        seed = bytes.fromhex(raw)
+    except ValueError:
+        return False, "A wallet signature is required."
+    derived = "0x" + hashlib.sha256(seed).digest()[:20].hex()
+    if derived != hash_addr:
+        return False, "Signature does not match this record."
+    parts = message.split("|")
+    if len(parts) != 5 or parts[0] != "MyICE" or parts[1] != "record" or parts[2] != hash_addr:
+        return False, "A wallet signature is required."
+    try:
+        ts = int(parts[3])
+    except ValueError:
+        return False, "A wallet signature is required."
+    if abs(int(time.time()) - ts) > MYICE_AUTH_MAX_AGE:
+        return False, "Signature expired. Sign again."
+    if parts[4] != hashlib.sha256(payload_text.encode("utf-8")).hexdigest():
+        return False, "Signature does not match this request."
+    try:
+        from eth_account import Account
+        signer = Account.from_key(seed).address.lower()
+        got = _recover(message, signature)
+    except Exception:
+        return False, "A wallet signature is required."
+    finally:
+        seed = b""
+    if got != signer:
+        return False, "Signature does not match this record."
+    if not _consume_sig(signature):
+        return False, "Signature already used. Sign again."
+    return True, ""
 
 PORT = int(os.environ.get("PORT", 5000))
 
 @app.before_request
 def _before_ai_paths():
-    """Gate LCAI-spending AI routes. store-health has its own gate."""
-    path = request.path or ""
-    ai_prefixes = (
-        "/api/chat", "/api/analyze-labs", "/api/check-interactions",
-        "/api/explain-medication", "/api/analyze-document",
-        "/api/analyze-symptoms", "/api/suggest-questions",
-    )
-    if not any(path.startswith(p) for p in ai_prefixes):
+    """Fail closed before any LCAI spend or gas-sponsored record change."""
+    if request.method == "OPTIONS":
         return None
-    data = request.get_json(silent=True) or {}
-    addr = (data.get("address") or data.get("wallet") or "").strip()
-    # Close the address-less hole — AI routes must name a wallet
-    if not addr:
-        return jsonify({"error": "address required for AI endpoints"}), 400
-    ok, code, err = _gate_ai(addr)
-    if not ok:
-        return jsonify(err), code
-    # Hard 402 premium gate OFF by default until a durable premium store exists.
-    # Rate limits + daily LCAI cap still protect the sponsor wallet either way.
-    if _PREMIUM_ENFORCE and not TEST_MODE and not _premium_ok(addr):
-        _ai_done()
-        return jsonify({"error": "Premium required — server-side check"}), 402
-    request._myice_ai_gated = True
+    if request.content_length is not None and request.content_length > MAX_HTTP_BODY:
+        return jsonify({"error": "request is too large"}), 413
+    path = request.path or ""
+    if any(path.startswith(prefix) for prefix in _AI_PREFIXES):
+        data = request.get_json(silent=True) or {}
+        if _too_long(data):
+            return jsonify({"error": "message is too long"}), 413
+        ok, err, code, addr = _ai_authorized(data)
+        if not ok:
+            return jsonify({"error": err}), code
+        gate_ok, gate_code, gate_err = _gate_ai(addr)
+        if not gate_ok:
+            return jsonify(gate_err), gate_code
+        request._myice_ai_gated = True
+        return None
+    if path == "/api/store-health" and request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        emergency = data.get("emergencyData") if isinstance(data.get("emergencyData"), str) else ""
+        private = data.get("privateData") if isinstance(data.get("privateData"), str) else ""
+        ok, err = _record_authorized((data.get("address") or ""), emergency + "|" + private)
+        if not ok:
+            return jsonify({"error": err}), 401
+        return None
+    if path == "/api/delete-health" and request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        ok, err = _record_authorized((data.get("address") or ""), "delete")
+        if not ok:
+            return jsonify({"error": err}), 401
+        return None
+    if path == "/api/get-health" and request.args.get("include_private", "false").lower() == "true":
+        ok, err = _record_authorized(request.args.get("address") or "", "private")
+        if not ok:
+            return jsonify({"error": err}), 401
     return None
 
 
@@ -275,12 +527,10 @@ def aivm_call(prompt: str, timeout: int = 360) -> str:
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    pk = os.environ.get("LIGHTCHAIN_PRIVATE_KEY", "")
     return jsonify({
         "status": "ok",
-        "service": "MyICE ⚕️ API",
-        "version": "2.0.0",
-        "aivm": "configured" if pk else "not configured",
+        "service": "MyICE",
+        "version": "2.1.0",
         "test_mode": TEST_MODE
     })
 
@@ -729,6 +979,8 @@ def store_health():
 
     try:
         ctx      = get_store_contract()
+        if not ctx:
+            return jsonify({"error": "Store contract unavailable"}), 503
         contract = ctx["contract"]
         if pr_bytes:
             fn = contract.functions.storeFor(user_address, em_bytes, pr_bytes)
@@ -862,10 +1114,12 @@ def serve_static_asset(asset):
 def _after_ai_release(resp):
     if getattr(request, "_myice_ai_gated", False):
         if resp.status_code < 500:
-            # count spend on successful-ish responses (2xx/4xx after work may vary)
             if 200 <= resp.status_code < 300:
                 _record_ai_spend()
         _ai_done()
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "no-referrer"
     return resp
 
 # ════════════════════════════════════════════════════════════════════════
